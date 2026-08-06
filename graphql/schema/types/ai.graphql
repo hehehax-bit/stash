@@ -573,6 +573,16 @@ type AIOHistoryTimelineEntry {
   count: Int!
 }
 
+"One day of gooning history: O count, scenes finished, summed height, top performer."
+type AIFlightLogEntry {
+  date: String!
+  o_count: Int!
+  scene_count: Int!
+  altitude: Int!
+  top_performer: String
+  top_performer_id: ID
+}
+
 type AISavedPlan {
   id: ID!
   name: String!

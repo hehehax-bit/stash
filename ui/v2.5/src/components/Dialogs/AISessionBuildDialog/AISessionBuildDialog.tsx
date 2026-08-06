@@ -382,6 +382,11 @@ export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
                   id: "config.tasks.ai_session.ordering_build_up",
                 })}
               </option>
+              <option value="climb">
+                {intl.formatMessage({
+                  id: "config.tasks.ai_session.ordering_climb",
+                })}
+              </option>
               <option value="peak_first">
                 {intl.formatMessage({
                   id: "config.tasks.ai_session.ordering_peak_first",

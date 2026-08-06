@@ -99,6 +99,136 @@ func (s *SceneStore) OHistoryTimeline(ctx context.Context, days int) ([]*models.
 	return out, rows.Err()
 }
 
+// FlightLog returns one entry per day (for the last N days) with O counts,
+// distinct scenes finished, the summed height of those scenes, and the day's
+// top performer.
+func (s *SceneStore) FlightLog(ctx context.Context, days int) ([]*models.AIFlightLogEntry, error) {
+	from := fmt.Sprintf("-%d days", days)
+
+	type dayAgg struct {
+		oCount      int
+		sceneCount  int
+		sceneIDs    []int
+		altitude    int
+		performer   string
+		performerID *int
+	}
+
+	agg := map[string]*dayAgg{}
+	var dayOrder []string
+
+	rows, err := dbWrapper.Queryx(ctx, `
+		SELECT date(o_date) AS day, COUNT(*) AS o_count, COUNT(DISTINCT scene_id) AS scene_count
+		FROM scenes_o_dates
+		WHERE o_date >= datetime('now', ?)
+		GROUP BY date(o_date)
+		ORDER BY day`, from)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var day string
+		var e dayAgg
+		if err := rows.Scan(&day, &e.oCount, &e.sceneCount); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		agg[day] = &e
+		dayOrder = append(dayOrder, day)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+
+	// distinct scenes per day, for the altitude sum
+	rows, err = dbWrapper.Queryx(ctx, `
+		SELECT date(o_date) AS day, scene_id
+		FROM scenes_o_dates
+		WHERE o_date >= datetime('now', ?)
+		GROUP BY date(o_date), scene_id`, from)
+	if err != nil {
+		return nil, err
+	}
+	var allIDs []int
+	for rows.Next() {
+		var day string
+		var sceneID int
+		if err := rows.Scan(&day, &sceneID); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if e, ok := agg[day]; ok {
+			e.sceneIDs = append(e.sceneIDs, sceneID)
+			allIDs = append(allIDs, sceneID)
+		}
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+
+	heights := map[int]int{}
+	if len(allIDs) > 0 {
+		heights, err = s.GetSceneHeights(ctx, allIDs)
+		if err != nil {
+			return nil, err
+		}
+	}
+	for _, e := range agg {
+		for _, id := range e.sceneIDs {
+			e.altitude += heights[id]
+		}
+	}
+
+	// top performer per day (most O's that day)
+	rows, err = dbWrapper.Queryx(ctx, `
+		SELECT day, performer_name, performer_id FROM (
+			SELECT date(od.o_date) AS day, p.name AS performer_name, p.id AS performer_id,
+			       COUNT(*) AS c,
+			       ROW_NUMBER() OVER (PARTITION BY date(od.o_date) ORDER BY COUNT(*) DESC, p.name) AS rn
+			FROM scenes_o_dates od
+			JOIN performers_scenes ps ON ps.scene_id = od.scene_id
+			JOIN performers p ON p.id = ps.performer_id
+			WHERE od.o_date >= datetime('now', ?)
+			GROUP BY date(od.o_date), p.id
+		) WHERE rn = 1`, from)
+	if err != nil {
+		return nil, err
+	}
+	topPerformer := map[string]string{}
+	topPerformerID := map[string]int{}
+	for rows.Next() {
+		var day, name string
+		var performerID int
+		if err := rows.Scan(&day, &name, &performerID); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		topPerformer[day] = name
+		topPerformerID[day] = performerID
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+
+	out := make([]*models.AIFlightLogEntry, 0, len(dayOrder))
+	for _, day := range dayOrder {
+		e := agg[day]
+		entry := &models.AIFlightLogEntry{
+			Date:       day,
+			OCount:     e.oCount,
+			SceneCount: e.sceneCount,
+			Altitude:   e.altitude,
+		}
+		if name, ok := topPerformer[day]; ok {
+			entry.TopPerformer = name
+			id := topPerformerID[day]
+			entry.TopPerformerID = &id
+		}
+		out = append(out, entry)
+	}
+	return out, nil
+}
+
 // GetSceneHeights returns a 0-25 height score per scene id: steam plus a
 // bonus for logged O's and AI-detected moods.
 func (s *SceneStore) GetSceneHeights(ctx context.Context, sceneIDs []int) (map[int]int, error) {

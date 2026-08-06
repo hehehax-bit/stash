@@ -71,7 +71,26 @@ const FAMILIES: IAchievementFamily[] = [
   { id: "edge", messageID: "achievements.edge", tiers: [10, 50] },
   { id: "transcend", messageID: "achievements.transcend", tiers: [1] },
   { id: "chapel", messageID: "achievements.chapel", tiers: [1] },
+  {
+    id: "troposphere",
+    messageID: "achievements.troposphere",
+    tiers: [10],
+  },
+  {
+    id: "stratosphere",
+    messageID: "achievements.stratosphere",
+    tiers: [30],
+  },
+  { id: "orbit", messageID: "achievements.orbit", tiers: [100] },
 ];
+
+function loadBestAltitude(): number {
+  try {
+    return Number(localStorage.getItem("stash.bestAltitude") ?? "0");
+  } catch {
+    return 0;
+  }
+}
 
 export const Achievements: React.FC = () => {
   const { data: statsData } = useStats();
@@ -103,6 +122,9 @@ export const Achievements: React.FC = () => {
     edge: edgePauses,
     transcend: loadFlag("stash.achievement.transcend") ? 1 : 0,
     chapel: loadFlag("stash.achievement.nightChapel") ? 1 : 0,
+    troposphere: loadBestAltitude(),
+    stratosphere: loadBestAltitude(),
+    orbit: loadBestAltitude(),
   };
 
   const unlocked = FAMILIES.reduce(

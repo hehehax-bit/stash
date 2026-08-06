@@ -287,6 +287,51 @@ type AIOHistoryTimelineEntry struct {
 	Count int    `json:"count"`
 }
 
+type AIFlightLogEntry struct {
+	Date           string  `json:"date"`
+	OCount         int     `json:"o_count"`
+	SceneCount     int     `json:"scene_count"`
+	Altitude       int     `json:"altitude"`
+	TopPerformer   *string `json:"top_performer"`
+	TopPerformerID *string `json:"top_performer_id"`
+}
+
+func (r *queryResolver) AiFlightLog(ctx context.Context, days *int) ([]*AIFlightLogEntry, error) {
+	n := 30
+	if days != nil && *days > 0 {
+		n = *days
+	}
+
+	var found []*models.AIFlightLogEntry
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		found, err = r.repository.Scene.FlightLog(ctx, n)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+
+	out := make([]*AIFlightLogEntry, 0, len(found))
+	for _, e := range found {
+		item := &AIFlightLogEntry{
+			Date:       e.Date,
+			OCount:     e.OCount,
+			SceneCount: e.SceneCount,
+			Altitude:   e.Altitude,
+		}
+		if e.TopPerformer != "" {
+			performer := e.TopPerformer
+			item.TopPerformer = &performer
+		}
+		if e.TopPerformerID != nil {
+			id := fmt.Sprintf("%d", *e.TopPerformerID)
+			item.TopPerformerID = &id
+		}
+		out = append(out, item)
+	}
+	return out, nil
+}
+
 func (r *queryResolver) AiOHistoryTimeline(ctx context.Context, days *int) ([]*AIOHistoryTimelineEntry, error) {
 	n := 30
 	if days != nil && *days > 0 {

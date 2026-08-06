@@ -39,6 +39,14 @@ function loadSessionStats(): { totalMinutes: number; sessions: number } {
   }
 }
 
+function loadQuestXP(): number {
+  try {
+    return Number(localStorage.getItem("stash.questXP") ?? "0");
+  } catch {
+    return 0;
+  }
+}
+
 export function computeXP(
   scenesPlayed: number,
   totalO: number,
@@ -50,7 +58,8 @@ export function computeXP(
     totalO * 5 +
     streak * 10 +
     sessionStats.sessions * 25 +
-    Math.floor(sessionStats.totalMinutes / 10)
+    Math.floor(sessionStats.totalMinutes / 10) +
+    loadQuestXP()
   );
 }
 

@@ -434,6 +434,41 @@ func TestOHistoryLeaderboard(t *testing.T) {
 	})
 }
 
+func TestFlightLog(t *testing.T) {
+	withRollbackTxn(func(ctx context.Context) error {
+		_, err := db.Scene.AddO(ctx, sceneIDs[sceneIdxWithTag], []time.Time{time.Now()})
+		require.NoError(t, err)
+
+		// give the scene some height: moans + low silence + a mood
+		require.NoError(t, db.AISceneAudio.Upsert(ctx, &models.AISceneAudio{
+			SceneID:      sceneIDs[sceneIdxWithTag],
+			HasAudio:     true,
+			Moans:        true,
+			SilenceRatio: 5,
+		}))
+		require.NoError(t, db.AIMood.Create(ctx, &models.AISceneMood{SceneID: sceneIDs[sceneIdxWithTag], Mood: "rough"}))
+
+		entries, err := db.Scene.FlightLog(ctx, 30)
+		require.NoError(t, err)
+		require.NotEmpty(t, entries)
+
+		today := time.Now().Format("2006-01-02")
+		var todayEntry *models.AIFlightLogEntry
+		for _, e := range entries {
+			if e.Date == today {
+				todayEntry = e
+				break
+			}
+		}
+		require.NotNil(t, todayEntry, "today must appear in the flight log")
+		assert.Equal(t, 1, todayEntry.OCount)
+		assert.Equal(t, 1, todayEntry.SceneCount)
+		assert.Greater(t, todayEntry.Altitude, 0, "scene height must contribute altitude")
+
+		return nil
+	})
+}
+
 func TestSceneSteamAndMoodCriteria(t *testing.T) {
 	withRollbackTxn(func(ctx context.Context) error {
 		// scene with moans, low silence, and tags -> steam 10

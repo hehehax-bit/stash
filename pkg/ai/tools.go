@@ -1216,6 +1216,137 @@ func recommendScene(ctx context.Context, repo models.Repository, args json.RawMe
 	return b.String(), nil
 }
 
+// describeMyType summarizes the user's taste from their O history: the
+// performers they finished on most often (with attributes), the mood profile
+// of the scenes they finished, and the height profile of those scenes.
+func describeMyType(ctx context.Context, repo models.Repository) (string, error) {
+	lb, err := repo.Scene.OHistoryLeaderboard(ctx, 8)
+	if err != nil {
+		return "", fmt.Errorf("querying O history: %w", err)
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "The user's type profile, built from their O history (%d performers found):\n\n", len(lb))
+
+	shown := 0
+	for _, e := range lb {
+		if shown >= 5 {
+			break
+		}
+		p, err := repo.Performer.Find(ctx, e.PerformerID)
+		if err != nil || p == nil {
+			continue
+		}
+
+		var attrs []string
+		if p.Ethnicity != "" {
+			attrs = append(attrs, "ethnicity: "+p.Ethnicity)
+		}
+		if p.HairColor != "" {
+			attrs = append(attrs, "hair: "+p.HairColor)
+		}
+		if p.Country != "" {
+			attrs = append(attrs, "country: "+p.Country)
+		}
+		if p.Measurements != "" {
+			attrs = append(attrs, "measurements: "+p.Measurements)
+		}
+		if p.Height != nil && *p.Height > 0 {
+			attrs = append(attrs, fmt.Sprintf("height: %d cm", *p.Height))
+		}
+		attrStr := ""
+		if len(attrs) > 0 {
+			attrStr = " (" + strings.Join(attrs, ", ") + ")"
+		}
+		fmt.Fprintf(&b, "- %s: finished in %d scene(s)%s\n", p.Name, e.OScenes, attrStr)
+		shown++
+	}
+
+	// moods and heights of the scenes the user finished on
+	pp := 200
+	result, err := repo.Scene.Query(ctx, models.SceneQueryOptions{
+		SceneFilter: &models.SceneFilterType{
+			OCounter: &models.IntCriterionInput{
+				Value:    1,
+				Modifier: models.CriterionModifierGreaterThan,
+			},
+		},
+		QueryOptions: models.QueryOptions{
+			FindFilter: &models.FindFilterType{PerPage: &pp},
+		},
+	})
+	if err != nil {
+		return "", fmt.Errorf("querying finished scenes: %w", err)
+	}
+	scenes, err := result.Resolve(ctx)
+	if err != nil {
+		return "", fmt.Errorf("resolving finished scenes: %w", err)
+	}
+
+	if len(scenes) == 0 {
+		b.WriteString("\nThe user has not logged any O history yet — tell them to log their first O to unlock this profile.")
+		return b.String(), nil
+	}
+
+	ids := make([]int, len(scenes))
+	for i, s := range scenes {
+		ids[i] = s.ID
+	}
+	heights, err := repo.Scene.GetSceneHeights(ctx, ids)
+	if err != nil {
+		return "", fmt.Errorf("getting scene heights: %w", err)
+	}
+	heightTotal := 0
+	for _, h := range heights {
+		heightTotal += h
+	}
+	avgHeight := float64(heightTotal) / float64(len(heights))
+
+	moodCounts := map[string]int{}
+	for _, s := range scenes {
+		moods, err := repo.AIMood.FindBySceneID(ctx, s.ID)
+		if err != nil {
+			continue
+		}
+		for _, m := range moods {
+			moodCounts[m.Mood]++
+		}
+	}
+
+	fmt.Fprintf(&b, "\nFinished %d scene(s) in total.\n", len(scenes))
+	fmt.Fprintf(&b, "Average height of finished scenes: %.1f/25 (%s).\n", avgHeight, heightTrendWord(avgHeight))
+	if len(moodCounts) > 0 {
+		type moodCount struct {
+			mood  string
+			count int
+		}
+		var counts []moodCount
+		for m, c := range moodCounts {
+			counts = append(counts, moodCount{mood: m, count: c})
+		}
+		sort.Slice(counts, func(i, j int) bool { return counts[i].count > counts[j].count })
+		b.WriteString("\nMood profile of finished scenes:\n")
+		for _, c := range counts {
+			fmt.Fprintf(&b, "- %s: %d\n", c.mood, c.count)
+		}
+	}
+
+	b.WriteString("\n\nExplain to the user what this says about their type, in a playful tone.")
+	return b.String(), nil
+}
+
+// heightTrendWord labels an average scene height for the taste profile.
+func heightTrendWord(avg float64) string {
+	switch {
+	case avg >= 20:
+		return "high and intense — they like it heavy"
+	case avg >= 12:
+		return "moderate — balanced sessions"
+	default:
+		return "gentle — slow-burn material"
+	}
+}
+
 func planSession(ctx context.Context, repo models.Repository, args json.RawMessage, cfg ToolConfig) (string, error) {
 	var params struct {
 		Request string `json:"request"`
@@ -1912,6 +2043,14 @@ func GetTools(cfg ToolConfig) []Tool {
 			},
 			Execute: func(ctx context.Context, repo models.Repository, args json.RawMessage) (string, error) {
 				return recommendScene(ctx, repo, args, cfg)
+			},
+		},
+		{
+			Name:        "describe_my_type",
+			Description: "Summarize the user's taste based on their actual gooning history: the performers they finished on most often, their physical attributes, and the moods/heights of the scenes they logged O's for. Use this when the user asks what their 'type' is, who they finish to most, or what their history says about their taste. Requires O history (scenes_o_dates).",
+			Parameters:  emptyParam,
+			Execute: func(ctx context.Context, repo models.Repository, args json.RawMessage) (string, error) {
+				return describeMyType(ctx, repo)
 			},
 		},
 		{

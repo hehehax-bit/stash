@@ -710,6 +710,29 @@ func (_m *SceneReaderWriter) FindMany(ctx context.Context, ids []int) ([]*models
 	return r0, r1
 }
 
+// FlightLog provides a mock function with given fields: ctx, days
+func (_m *SceneReaderWriter) FlightLog(ctx context.Context, days int) ([]*models.AIFlightLogEntry, error) {
+	ret := _m.Called(ctx, days)
+
+	var r0 []*models.AIFlightLogEntry
+	if rf, ok := ret.Get(0).(func(context.Context, int) []*models.AIFlightLogEntry); ok {
+		r0 = rf(ctx, days)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.AIFlightLogEntry)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, days)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetAllOCount provides a mock function with given fields: ctx
 func (_m *SceneReaderWriter) GetAllOCount(ctx context.Context) (int, error) {
 	ret := _m.Called(ctx)

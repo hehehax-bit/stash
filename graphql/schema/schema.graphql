@@ -283,6 +283,8 @@ type Query {
   aiSessionDescribe(text: String!): AISessionDescribeResult!
   "Logged O dates per day for the last N days."
   aiOHistoryTimeline(days: Int): [AIOHistoryTimelineEntry!]!
+  "Per-day gooning history for the last N days (O count, scenes, altitude, top performer)."
+  aiFlightLog(days: Int): [AIFlightLogEntry!]!
   "Performers ranked by the number of scenes you logged an O for."
   aiOHistoryLeaderboard(limit: Int): [AIOHistoryLeaderboardEntry!]!
   "Number of scenes per AI-detected mood."

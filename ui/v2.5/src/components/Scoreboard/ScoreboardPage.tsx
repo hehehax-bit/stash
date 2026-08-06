@@ -57,6 +57,9 @@ export const ScoreboardPage: React.FC = () => {
   });
   const { data: savedData } = GQL.useAiSavedMomentsQuery();
   const { data: plansData, refetch: refetchPlans } = GQL.useAiSavedPlansQuery();
+  const { data: flightData } = GQL.useAiFlightLogQuery({
+    variables: { days: 30 },
+  });
   const history = useHistory();
 
   function playPlan(sceneIds: string[]) {
@@ -90,7 +93,14 @@ export const ScoreboardPage: React.FC = () => {
 
   const [showAllTimeline, setShowAllTimeline] = React.useState(false);
 
-  if (!moanData && !oData && !timelineData && !savedData && !plansData) {
+  if (
+    !moanData &&
+    !oData &&
+    !timelineData &&
+    !savedData &&
+    !plansData &&
+    !flightData
+  ) {
     return <LoadingIndicator />;
   }
 
@@ -273,6 +283,44 @@ export const ScoreboardPage: React.FC = () => {
               </Link>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="col-12">
+        <div className="scoreboard-section">
+          <h5>
+            🚀 <FormattedMessage id="scoreboard.flight_log" />
+          </h5>
+          {(flightData?.aiFlightLog ?? []).length === 0 ? (
+            <div className="text-muted">
+              <FormattedMessage id="scoreboard.empty" />
+            </div>
+          ) : (
+            <div className="flight-log">
+              {(flightData?.aiFlightLog ?? [])
+                .slice()
+                .reverse()
+                .map((e: GQL.AiFlightLogQuery["aiFlightLog"][number]) => (
+                  <div key={e.date} className="flight-log-row">
+                    <span className="flight-log-date">{e.date.slice(5)}</span>
+                    <span className="flight-log-stats">
+                      {e.o_count} O · {e.scene_count} scenes · ▴ {e.altitude} km
+                    </span>
+                    {e.top_performer && (
+                      <span className="flight-log-performer">
+                        {e.top_performer_id ? (
+                          <Link to={`/performers/${e.top_performer_id}`}>
+                            {e.top_performer}
+                          </Link>
+                        ) : (
+                          e.top_performer
+                        )}
+                      </span>
+                    )}
+                  </div>
+                ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -452,6 +452,17 @@ query AiOHistoryTimeline($days: Int) {
   }
 }
 
+query AiFlightLog($days: Int) {
+  aiFlightLog(days: $days) {
+    date
+    o_count
+    scene_count
+    altitude
+    top_performer
+    top_performer_id
+  }
+}
+
 query AiSavedPlans {
   aiSavedPlans {
     id

@@ -59,6 +59,7 @@ import {
   faDove,
   faClock,
   faHeart,
+  faRocket,
 } from "@fortawesome/free-solid-svg-icons";
 import { objectPath, objectTitle } from "src/core/files";
 import { RatingSystem } from "src/components/Shared/Rating/RatingSystem";
@@ -838,6 +839,9 @@ const ScenePage: React.FC<IProps> = PatchComponent("ScenePage", (props) => {
   );
 });
 
+// atmosphere layers crossed by a session's cumulative altitude, in km
+const ATMO_LAYERS = [10, 30, 50, 80, 100];
+
 const WhoIsSheChip: React.FC<{ sceneId?: string }> = ({ sceneId }) => {
   const history = useHistory();
   const { data } = GQL.useFindSceneMarkerTagsQuery({
@@ -1181,6 +1185,7 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
       title: string;
       bestMoment: number;
       at: string;
+      height?: number;
     }[];
     oCount: number;
     startedAt?: number;
@@ -1201,18 +1206,68 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
 
   const [sessionRecap, setSessionRecap] = useState<SessionLog | null>(null);
 
+  // --- stratosphere: session altitude & atmosphere milestones ---
+  const [sessionPaused, setSessionPaused] = useState(false);
+  const [milestoneOverlay, setMilestoneOverlay] = useState<number | null>(null);
+  const [milestoneBlind, setMilestoneBlind] = useState(false);
+  const prevAltitudeRef = useRef(0);
+
   // ticking clock for the session status strip while a session runs
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    if (!afterglow) return;
+    if (!afterglow || sessionPaused) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, [afterglow]);
+  }, [afterglow, sessionPaused]);
 
   const sessionLog = afterglow ? readSession() : null;
   const elapsedSecs = sessionLog?.startedAt
     ? Math.max(0, Math.floor((now - sessionLog.startedAt) / 1000))
     : 0;
+
+  const altitude = (sessionLog?.entries ?? []).reduce(
+    (sum, e) => sum + (e.height ?? 0),
+    0
+  );
+  const nextLayer = ATMO_LAYERS.find((l) => l > altitude);
+
+  useEffect(() => {
+    if (!afterglow) {
+      prevAltitudeRef.current = 0;
+      return;
+    }
+    const prev = prevAltitudeRef.current;
+    for (const layer of ATMO_LAYERS) {
+      if (prev < layer && altitude >= layer) {
+        _pausePlayer.current();
+        if (layer === 30) {
+          setMilestoneOverlay(30);
+        } else if (layer === 50) {
+          setMilestoneBlind(true);
+          setMilestoneOverlay(50);
+        } else {
+          setMilestoneOverlay(layer);
+        }
+        break;
+      }
+    }
+    prevAltitudeRef.current = altitude;
+
+    try {
+      const best = Number(localStorage.getItem("stash.bestAltitude") ?? "0");
+      if (altitude > best) {
+        localStorage.setItem("stash.bestAltitude", String(altitude));
+      }
+    } catch {
+      // ignore altitude tracking failures
+    }
+  }, [afterglow, altitude]);
+
+  // milestone blindness lasts one scene
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally re-runs when the scene changes
+  useEffect(() => {
+    setMilestoneBlind(false);
+  }, [scene?.id, afterglow]);
 
   const sceneRef = useRef(scene);
   sceneRef.current = scene;
@@ -1273,6 +1328,22 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
     skip: !afterglow || !scene?.id,
   });
 
+  function abandonSession() {
+    if (
+      !window.confirm(
+        intl.formatMessage({ id: "scene_roulette.abandon_confirm" })
+      )
+    ) {
+      return;
+    }
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.setItem("stash.afterglow", "0");
+    setAfterglow(false);
+    setSessionPaused(false);
+    setMilestoneOverlay(null);
+    setMilestoneBlind(false);
+  }
+
   // keep fresh references so the effect can depend only on the scene
   const queueNextRef = useRef(queueNext);
   queueNextRef.current = queueNext;
@@ -1281,7 +1352,7 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
 
   // afterglow (reel) mode: jump to each scene's best moment and advance
   useEffect(() => {
-    if (!afterglow) return;
+    if (!afterglow || sessionPaused) return;
 
     // record this scene in the session log
     const current = sceneRef.current;
@@ -1297,6 +1368,7 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
           title: current.title || current.id,
           bestMoment: bestMomentData?.aiBestMoment ?? 0,
           at: new Date().toISOString(),
+          height: current.height,
         });
         writeSession(session);
       }
@@ -1311,7 +1383,7 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
       queueNextRef.current(true);
     }, 45000);
     return () => clearTimeout(timer);
-  }, [afterglow, bestMomentData, readSession, writeSession]);
+  }, [afterglow, sessionPaused, bestMomentData, readSession, writeSession]);
 
   // --- edging mode ---
   // interval in minutes; -1 = random (0.5-10 min), never revealed
@@ -1320,7 +1392,7 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
   const [edgePaused, setEdgePaused] = useState(false);
 
   useEffect(() => {
-    if (!edging || edgePaused) return;
+    if (!edging || edgePaused || sessionPaused) return;
     const delay =
       edgeInterval === -1
         ? 30000 + Math.floor(Math.random() * 570000)
@@ -1336,7 +1408,7 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
       }
     }, delay);
     return () => clearTimeout(t);
-  }, [edging, edgePaused, edgeInterval]);
+  }, [edging, edgePaused, edgeInterval, sessionPaused]);
 
   function toggleEdging() {
     if (edging) {
@@ -1351,6 +1423,12 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
   const [blind, setBlind] = useState(false);
 
   async function startBlindGoon() {
+    try {
+      const n = Number(localStorage.getItem("stash.blindCount") ?? "0") + 1;
+      localStorage.setItem("stash.blindCount", String(n));
+    } catch {
+      // ignore counter failures
+    }
     const filter = new ListFilterModel(GQL.FilterMode.Scenes);
     filter.sortBy = "random";
     filter.itemsPerPage = 50;
@@ -1487,7 +1565,7 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
       />
       <div
         className={`scene-player-container ${collapsed ? "expanded" : ""} ${
-          blind ? "blind-goon" : ""
+          blind || milestoneBlind ? "blind-goon" : ""
         }`}
       >
         <div className="scene-roulette-bar">
@@ -1590,6 +1668,19 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
             <span className="session-status-o">
               <Icon icon={faHeart} /> {sessionLog?.oCount ?? 0}
             </span>
+            <span className="session-status-altitude" title="Session altitude">
+              <Icon icon={faRocket} /> {altitude} km
+            </span>
+            <div className="session-altitude-progress">
+              <div
+                className="session-altitude-bar"
+                style={{
+                  width: nextLayer
+                    ? `${Math.min(100, (altitude / nextLayer) * 100)}%`
+                    : "100%",
+                }}
+              />
+            </div>
             {transcend && (
               <span className="session-badge session-badge-transcend">
                 Transcend · scene {transcendScene}
@@ -1598,9 +1689,41 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
             {blind && (
               <span className="session-badge session-badge-blind">Blind</span>
             )}
+            {milestoneBlind && (
+              <span className="session-badge session-badge-blind">
+                Blind climb
+              </span>
+            )}
             {edging && (
               <span className="session-badge session-badge-edging">Edging</span>
             )}
+            <span className="session-strip-controls">
+              <Button
+                size="sm"
+                variant={sessionPaused ? "warning" : "outline-secondary"}
+                onClick={() => setSessionPaused(!sessionPaused)}
+              >
+                {sessionPaused ? (
+                  <FormattedMessage id="scene_roulette.resume" />
+                ) : (
+                  <FormattedMessage id="scene_roulette.pause" />
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline-secondary"
+                onClick={() => queueNextRef.current(true)}
+              >
+                <FormattedMessage id="scene_roulette.next_scene" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline-danger"
+                onClick={() => abandonSession()}
+              >
+                <FormattedMessage id="scene_roulette.abandon" />
+              </Button>
+            </span>
           </div>
         )}
         <ClimaxProjection sceneId={scene?.id} active={afterglow} />
@@ -1648,6 +1771,28 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
               }}
             >
               <FormattedMessage id="scene_roulette.edging_stop" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {milestoneOverlay && (
+        <div className="edging-overlay milestone-overlay">
+          <h3>
+            <Icon icon={faRocket} />{" "}
+            <FormattedMessage
+              id={`scene_roulette.milestone_${milestoneOverlay}`}
+            />
+          </h3>
+          <div>
+            <Button
+              variant="danger"
+              onClick={() => {
+                setMilestoneOverlay(null);
+                _playPlayer.current();
+              }}
+            >
+              <FormattedMessage id="scene_roulette.edging_continue" />
             </Button>
           </div>
         </div>

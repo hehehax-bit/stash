@@ -1104,6 +1104,7 @@ const AIChatPanel: React.FC = () => {
                 "ai_chat.suggestion_2",
                 "ai_chat.suggestion_3",
                 "ai_chat.suggestion_4",
+                "ai_chat.suggestion_5",
               ].map((id) => (
                 <button
                   key={id}

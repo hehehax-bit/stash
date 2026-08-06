@@ -17,7 +17,8 @@ type AISessionBuildInput struct {
 	Vibe            string   `json:"vibe"`
 	Limit           *int     `json:"limit"`
 	// Ordering: "build_up" (lowest steam first, peaking at the end),
-	// "peak_first" (highest steam first), or empty for score order.
+	// "peak_first" (highest steam first), "climb" (lowest height first,
+	// climbing through the session), or empty for score order.
 	Ordering string `json:"ordering"`
 	// Ritual: an ordered mood sequence. When set, the plan is built by
 	// cycling through the moods (each internally steam-ordered) until the
@@ -30,6 +31,7 @@ type AISessionScene struct {
 	Title      string  `json:"title"`
 	Duration   float64 `json:"duration"`
 	Steam      int     `json:"steam"`
+	Height     int     `json:"height"`
 	BestMoment float64 `json:"best_moment"`
 }
 
@@ -225,14 +227,46 @@ func (s *Manager) buildSessionInDB(ctx context.Context, r models.Repository, inp
 		return nil, 0, fmt.Errorf("no scenes match the session criteria")
 	}
 
+	if err := s.fillSceneHeights(ctx, r, plan); err != nil {
+		return nil, 0, err
+	}
+
 	switch input.Ordering {
 	case "build_up":
 		sort.Slice(plan, func(i, j int) bool { return plan[i].Steam < plan[j].Steam })
 	case "peak_first":
 		sort.Slice(plan, func(i, j int) bool { return plan[i].Steam > plan[j].Steam })
+	case "climb":
+		sort.Slice(plan, func(i, j int) bool { return plan[i].Height < plan[j].Height })
 	}
 
 	return plan, total / 60, nil
+}
+
+// fillSceneHeights attaches the 0-25 height score to each scene in the plan.
+func (s *Manager) fillSceneHeights(ctx context.Context, r models.Repository, plan []AISessionScene) error {
+	if len(plan) == 0 {
+		return nil
+	}
+
+	ids := make([]int, len(plan))
+	for i, sc := range plan {
+		ids[i] = sc.SceneID
+	}
+
+	var heights map[int]int
+	if err := r.WithReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		heights, err = r.Scene.GetSceneHeights(ctx, ids)
+		return err
+	}); err != nil {
+		return fmt.Errorf("getting scene heights: %w", err)
+	}
+
+	for i := range plan {
+		plan[i].Height = heights[plan[i].SceneID]
+	}
+	return nil
 }
 
 // buildRitualPlan builds a plan by cycling through the ritual mood sequence,
@@ -352,6 +386,10 @@ func (s *Manager) buildRitualPlan(ctx context.Context, r models.Repository, inpu
 
 	if len(plan) == 0 {
 		return nil, 0, fmt.Errorf("no scenes match the ritual moods")
+	}
+
+	if err := s.fillSceneHeights(ctx, r, plan); err != nil {
+		return nil, 0, err
 	}
 
 	return plan, total / 60, nil

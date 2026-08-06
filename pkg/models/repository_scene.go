@@ -38,6 +38,7 @@ type SceneQueryer interface {
 	GetSteamScores(ctx context.Context, sceneIDs []int) (map[int]int, error)
 	OHistoryLeaderboard(ctx context.Context, limit int) ([]*AOHistoryLeaderboardEntry, error)
 	OHistoryTimeline(ctx context.Context, days int) ([]*AIOHistoryTimelineEntry, error)
+	FlightLog(ctx context.Context, days int) ([]*AIFlightLogEntry, error)
 	GetSceneHeights(ctx context.Context, sceneIDs []int) (map[int]int, error)
 }
 
@@ -163,4 +164,15 @@ type AOHistoryLeaderboardEntry struct {
 type AIOHistoryTimelineEntry struct {
 	Date  string `json:"date"`
 	Count int    `json:"count"`
+}
+
+// AIFlightLogEntry is one day of gooning history: O count, distinct scenes
+// finished, the summed height of those scenes, and the day's top performer.
+type AIFlightLogEntry struct {
+	Date           string `json:"date"`
+	OCount         int    `json:"o_count"`
+	SceneCount     int    `json:"scene_count"`
+	Altitude       int    `json:"altitude"`
+	TopPerformer   string `json:"top_performer"`
+	TopPerformerID *int   `json:"top_performer_id"`
 }
