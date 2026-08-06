@@ -6,7 +6,11 @@ import * as GQL from "src/core/generated-graphql";
 import { MarkerWallPanel } from "src/components/Wall/WallPanel";
 import { PrimaryTags } from "./PrimaryTags";
 import { SceneMarkerForm } from "./SceneMarkerForm";
-import { mutateMetadataGenerateHighlightClip } from "src/core/StashService";
+import {
+  mutateMetadataGenerateHighlightClip,
+  mutateAiSaveMoment,
+  mutateAiUnsaveMoment,
+} from "src/core/StashService";
 import { useToast } from "src/hooks/Toast";
 
 interface ISceneMarkersPanelProps {
@@ -19,9 +23,13 @@ interface ISceneMarkersPanelProps {
 function ClimaxMap({
   markers,
   onClickMarker,
+  savedSet,
+  onToggleSaved,
 }: {
   markers: GQL.SceneMarkerDataFragment[];
   onClickMarker: (marker: GQL.SceneMarkerDataFragment) => void;
+  savedSet: Set<string>;
+  onToggleSaved: (markerId: string) => void;
 }) {
   const intensityMarkers = markers.filter(
     (m) => m.intensity !== null && m.intensity !== undefined
@@ -42,7 +50,7 @@ function ClimaxMap({
         return (
           <div
             key={m.id}
-            className="climax-peak"
+            className={`climax-peak ${savedSet.has(m.id) ? "saved" : ""}`}
             style={{
               height: `${Math.max(15, level * 100)}%`,
               left: `${left}%`,
@@ -50,7 +58,18 @@ function ClimaxMap({
             }}
             title={`${m.title} \u2014 ${Math.round(m.intensity ?? 0)}/10`}
             onClick={() => onClickMarker(m)}
-          />
+          >
+            <span
+              className="climax-heart"
+              role="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSaved(m.id);
+              }}
+            >
+              {savedSet.has(m.id) ? "\u2764\uFE0F" : "\u2661"}
+            </span>
+          </div>
         );
       })}
     </div>
@@ -68,6 +87,24 @@ export const SceneMarkersPanel: React.FC<ISceneMarkersPanelProps> = ({
   const { data, loading } = GQL.useFindSceneMarkerTagsQuery({
     variables: { id: sceneId },
   });
+  const { data: savedData, refetch: refetchSaved } =
+    GQL.useAiSavedMomentsQuery();
+  const savedSet = new Set(
+    savedData?.aiSavedMoments?.map((s) => s.marker_id) ?? []
+  );
+
+  async function toggleSaved(markerId: string) {
+    try {
+      if (savedSet.has(markerId)) {
+        await mutateAiUnsaveMoment(markerId);
+      } else {
+        await mutateAiSaveMoment(markerId);
+      }
+      refetchSaved();
+    } catch (e) {
+      Toast.error(e);
+    }
+  }
   const [isEditorOpen, setIsEditorOpen] = useState<boolean>(false);
   const [editingMarker, setEditingMarker] =
     useState<GQL.SceneMarkerDataFragment>();
@@ -132,7 +169,12 @@ export const SceneMarkersPanel: React.FC<ISceneMarkersPanelProps> = ({
 
   return (
     <div className="scene-markers-panel">
-      <ClimaxMap markers={sceneMarkersAll} onClickMarker={onClickMarker} />
+      <ClimaxMap
+        markers={sceneMarkersAll}
+        onClickMarker={onClickMarker}
+        savedSet={savedSet}
+        onToggleSaved={toggleSaved}
+      />
       <Button onClick={() => onOpenEditor()}>
         <FormattedMessage id="actions.create_marker" />
       </Button>

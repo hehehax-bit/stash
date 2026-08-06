@@ -86,6 +86,12 @@ const SceneDuplicateChecker = lazyComponent(
   () => import("./components/SceneDuplicateChecker/SceneDuplicateChecker")
 );
 const AIChat = lazyComponent(() => import("./components/AIChat/AIChatPanel"));
+const SavedMoments = lazyComponent(
+  () => import("./components/SavedMoments/SavedMomentsPage")
+);
+const Scoreboard = lazyComponent(
+  () => import("./components/Scoreboard/ScoreboardPage")
+);
 
 const appleRendering = isPlatformUniquelyRenderedByApple();
 
@@ -293,6 +299,8 @@ export const App: React.FC = () => {
               component={SceneDuplicateChecker}
             />
             <Route path="/aiChat" component={AIChat} />
+            <Route path="/saved" component={SavedMoments} />
+            <Route path="/scoreboard" component={Scoreboard} />
             <Route path="/setup" component={Setup} />
             <Route path="/welcome" component={Welcome} />
             <Route path="/migrate" component={Migrate} />

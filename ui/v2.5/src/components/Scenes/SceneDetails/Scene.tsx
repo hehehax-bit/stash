@@ -1,4 +1,4 @@
-import { Tab, Nav, Dropdown, Button } from "react-bootstrap";
+import { Tab, Nav, Dropdown, Button, Form } from "react-bootstrap";
 import React, {
   useCallback,
   useEffect,
@@ -32,6 +32,12 @@ import { Counter } from "src/components/Shared/Counter";
 import { useToast } from "src/hooks/Toast";
 import SceneQueue, { QueuedScene } from "src/models/sceneQueue";
 import { ListFilterModel } from "src/models/list-filter/filter";
+import { SteamScoreCriterion } from "src/models/list-filter/criteria/steam-score";
+import {
+  MoodsCriterion,
+  MoodsCriterionOption,
+} from "src/models/list-filter/criteria/moods";
+import { IOptionType } from "src/models/list-filter/types";
 import Mousetrap from "mousetrap";
 import { OrganizedButton } from "./OrganizedButton";
 import { useConfigurationContext } from "src/hooks/Config";
@@ -45,6 +51,10 @@ import {
   faChevronLeft,
   faDice,
   faBolt,
+  faHourglassHalf,
+  faEyeSlash,
+  faRadio,
+  faComments,
 } from "@fortawesome/free-solid-svg-icons";
 import { objectPath, objectTitle } from "src/core/files";
 import { RatingSystem } from "src/components/Shared/Rating/RatingSystem";
@@ -830,6 +840,7 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
   match,
 }) => {
   const intl = useIntl();
+  const Toast = useToast();
   const { id } = match.params;
   const { configuration } = useConfigurationContext();
   const { data, loading, error, refetch } = useFindScene(id);
@@ -900,6 +911,16 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
 
   function getSetTimestamp(fn: (value: number) => void) {
     _setTimestamp.current = fn;
+  }
+
+  const _pausePlayer = useRef<() => void>(() => {});
+  function getPausePlayer(fn: () => void) {
+    _pausePlayer.current = fn;
+  }
+
+  const _playPlayer = useRef<() => void>(() => {});
+  function getPlayPlayer(fn: () => void) {
+    _playPlayer.current = fn;
   }
 
   function setTimestamp(value: number) {
@@ -1108,6 +1129,7 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
       const session = readSession();
       if (session && session.entries.length > 0) {
         setSessionRecap(session);
+        localStorage.setItem("stash.achievement.firstSession", "1");
       }
       localStorage.removeItem(SESSION_KEY);
       setAfterglow(false);
@@ -1160,7 +1182,88 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
     return () => clearTimeout(timer);
   }, [afterglow, bestMomentData, readSession, writeSession]);
 
+  // --- edging mode ---
+  // interval in minutes; -1 = random (0.5-10 min), never revealed
+  const [edging, setEdging] = useState(false);
+  const [edgeInterval, setEdgeInterval] = useState(-1);
+  const [edgePaused, setEdgePaused] = useState(false);
+
+  useEffect(() => {
+    if (!edging || edgePaused) return;
+    const delay =
+      edgeInterval === -1
+        ? 30000 + Math.floor(Math.random() * 570000)
+        : edgeInterval * 60 * 1000;
+    const t = setTimeout(() => {
+      _pausePlayer.current();
+      setEdgePaused(true);
+    }, delay);
+    return () => clearTimeout(t);
+  }, [edging, edgePaused, edgeInterval]);
+
+  function toggleEdging() {
+    if (edging) {
+      setEdgePaused(false);
+      setEdging(false);
+    } else {
+      setEdging(true);
+    }
+  }
+
+  // --- blind goon mode ---
+  const [blind, setBlind] = useState(false);
+
+  async function startBlindGoon() {
+    const filter = new ListFilterModel(GQL.FilterMode.Scenes);
+    filter.sortBy = "random";
+    filter.itemsPerPage = 50;
+    const steam = new SteamScoreCriterion();
+    steam.value = 6;
+    steam.modifier = GQL.CriterionModifier.GreaterThan;
+    filter.criteria.push(steam);
+
+    const result = await queryFindScenes(filter);
+    const scenes = result.data.findScenes.scenes;
+    if (scenes.length === 0) {
+      Toast.error(intl.formatMessage({ id: "scene_roulette.blind_empty" }));
+      return;
+    }
+    setBlind(true);
+    loadScene(scenes[0].id, true, 1);
+  }
+
+  function toggleBlind() {
+    if (blind) {
+      setBlind(false);
+    } else {
+      startBlindGoon();
+    }
+  }
+
+  // --- vibe radio ---
+  async function startVibeRadio(mood: string) {
+    const filter = new ListFilterModel(GQL.FilterMode.Scenes);
+    filter.sortBy = "random";
+    filter.itemsPerPage = 100;
+    const moods = new MoodsCriterion();
+    moods.value = { items: [{ id: mood, label: mood }], excluded: [] };
+    filter.criteria.push(moods);
+
+    const result = await queryFindScenes(filter);
+    const scenes = result.data.findScenes.scenes;
+    if (scenes.length === 0) {
+      Toast.error(intl.formatMessage({ id: "scene_roulette.radio_empty" }));
+      return;
+    }
+    const params = scenes
+      .map((s) => `qs=${s.id}`)
+      .concat("afterglow=1", "autoplay=true")
+      .join("&");
+    history.push(`/scenes/${scenes[0].id}?${params}`);
+  }
+
   function onComplete() {
+    setBlind(false);
     // load the next scene if we're continuing
     if (continuePlaylist) {
       queueNext(true);
@@ -1223,7 +1326,11 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
         setContinuePlaylist={setContinuePlaylist}
         onRefreshScene={onRefreshScene}
       />
-      <div className={`scene-player-container ${collapsed ? "expanded" : ""}`}>
+      <div
+        className={`scene-player-container ${collapsed ? "expanded" : ""} ${
+          blind ? "blind-goon" : ""
+        }`}
+      >
         <div className="scene-roulette-bar">
           <Button
             variant="danger"
@@ -1240,6 +1347,67 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
             <Icon icon={faBolt} />{" "}
             <FormattedMessage id="scene_roulette.afterglow" />
           </Button>
+          <Button
+            variant={blind ? "dark" : "outline-dark"}
+            className="ml-2"
+            onClick={() => toggleBlind()}
+          >
+            <Icon icon={faEyeSlash} />{" "}
+            <FormattedMessage id="scene_roulette.blind" />
+          </Button>
+          <Button
+            variant="outline-info"
+            className="ml-2"
+            onClick={() => history.push(`/aiChat?watching=${scene?.id ?? ""}`)}
+          >
+            <Icon icon={faComments} />{" "}
+            <FormattedMessage id="scene_roulette.chat" />
+          </Button>
+          <Dropdown className="ml-2" id="vibe-radio-dropdown">
+            <Dropdown.Toggle variant="outline-danger" size="sm">
+              <Icon icon={faRadio} />{" "}
+              <FormattedMessage id="scene_roulette.radio" />
+            </Dropdown.Toggle>
+            <Dropdown.Menu>
+              {((MoodsCriterionOption.options ?? []) as IOptionType[]).map(
+                (o) => (
+                  <Dropdown.Item
+                    key={String(o.id)}
+                    onClick={() => startVibeRadio(String(o.id))}
+                  >
+                    {String(o.id)}
+                  </Dropdown.Item>
+                )
+              )}
+            </Dropdown.Menu>
+          </Dropdown>
+          <Button
+            variant={edging ? "warning" : "outline-warning"}
+            className="ml-2"
+            onClick={() => toggleEdging()}
+          >
+            <Icon icon={faHourglassHalf} />{" "}
+            <FormattedMessage id="scene_roulette.edging" />
+          </Button>
+          {edging && (
+            <Form.Control
+              as="select"
+              className="edge-interval-select"
+              value={edgeInterval}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                setEdgeInterval(Number(e.currentTarget.value))
+              }
+            >
+              <option value={-1}>
+                {intl.formatMessage({ id: "scene_roulette.edging_random" })}
+              </option>
+              {[1, 2, 3, 4, 5, 7, 10].map((m) => (
+                <option key={m} value={m}>
+                  {m} min
+                </option>
+              ))}
+            </Form.Control>
+          )}
         </div>
         <ScenePlayer
           key="ScenePlayer"
@@ -1249,11 +1417,46 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
           permitLoop={!continuePlaylist}
           initialTimestamp={initialTimestamp}
           sendSetTimestamp={getSetTimestamp}
+          sendPause={getPausePlayer}
+          sendPlay={getPlayPlayer}
           onComplete={onComplete}
           onNext={() => queueNext(true)}
           onPrevious={() => queuePrevious(true)}
         />
       </div>
+
+      {edgePaused && (
+        <div className="edging-overlay">
+          <h3>
+            <Icon icon={faHourglassHalf} />{" "}
+            <FormattedMessage id="scene_roulette.edging_overlay" />
+          </h3>
+          <p className="text-muted">
+            <FormattedMessage id="scene_roulette.edging_overlay_hint" />
+          </p>
+          <div>
+            <Button
+              variant="danger"
+              className="mr-2"
+              onClick={() => {
+                setEdgePaused(false);
+                _playPlayer.current();
+              }}
+            >
+              <FormattedMessage id="scene_roulette.edging_continue" />
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setEdgePaused(false);
+                setEdging(false);
+              }}
+            >
+              <FormattedMessage id="scene_roulette.edging_stop" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {sessionRecap && (
         <ModalComponent

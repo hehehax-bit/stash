@@ -275,6 +275,10 @@ type Query {
   aiBestMoment(scene_id: ID!): Float
   "Builds a goon session: a curated, duration-bounded queue of steamy scenes."
   aiSessionBuild(input: AISessionBuildInput!): AISessionPlan!
+  "Saved scene markers, newest first."
+  aiSavedMoments: [AISavedMoment!]!
+  "Logged O dates per day for the last N days."
+  aiOHistoryTimeline(days: Int): [AIOHistoryTimelineEntry!]!
   "Performers ranked by the number of scenes you logged an O for."
   aiOHistoryLeaderboard(limit: Int): [AIOHistoryLeaderboardEntry!]!
   "Number of scenes per AI-detected mood."
@@ -576,6 +580,10 @@ type Mutation {
   aiMoodGroupCreate(mood: String!): ID!
   "Generates a goon reel: a single video of best-moment clips from the given scenes. Returns the file path"
   metadataGenerateGoonReel(scene_ids: [ID!]!, duration_per_scene: Int): String!
+  "Saves a scene marker as a favorite moment"
+  aiSaveMoment(marker_id: ID!): Boolean!
+  "Removes a scene marker from the saved moments"
+  aiUnsaveMoment(marker_id: ID!): Boolean!
   "Applies all pending AI audit findings. Returns the number applied"
   aiAuditApplyAll: Int!
   "Rejects all pending AI audit findings. Returns the number rejected"

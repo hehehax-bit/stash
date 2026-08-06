@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useHistory } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { FormattedMessage } from "react-intl";
 import * as GQL from "src/core/generated-graphql";
@@ -10,6 +11,7 @@ import { Icon } from "src/components/Shared/Icon";
 import { Button } from "react-bootstrap";
 import { faCrown, faFire } from "@fortawesome/free-solid-svg-icons";
 import { AISessionBuildDialog } from "src/components/Dialogs/AISessionBuildDialog/AISessionBuildDialog";
+import { Achievements } from "./Achievements";
 
 const PICK_COUNT = 6;
 
@@ -87,7 +89,39 @@ const MoanerOfTheWeek: React.FC = () => {
   );
 };
 
+const RecentScenes: React.FC = () => {
+  const [scenes, setScenes] = useState<GQL.SlimSceneDataFragment[]>([]);
+
+  useEffect(() => {
+    const filter = new ListFilterModel(GQL.FilterMode.Scenes);
+    filter.sortBy = "last_played_at";
+    filter.sortDirection = GQL.SortDirectionEnum.Desc;
+    filter.itemsPerPage = 10;
+    queryFindScenes(filter)
+      .then((r) => setScenes(r.data.findScenes.scenes))
+      .catch(() => setScenes([]));
+  }, []);
+
+  if (scenes.length === 0) return null;
+
+  return (
+    <div className="for-you-row">
+      <h5>
+        <FormattedMessage id="front_page.recent_scenes" />
+      </h5>
+      <div className="row">
+        {scenes.map((s) => (
+          <div key={s.id} className="col-6 col-sm-4 col-md-3 col-xl-2">
+            <SceneCard scene={s} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const ForYouHub: React.FC = () => {
+  const history = useHistory();
   const [showSession, setShowSession] = useState(false);
   return (
     <>
@@ -95,9 +129,18 @@ export const ForYouHub: React.FC = () => {
         <Button variant="outline-danger" onClick={() => setShowSession(true)}>
           <FormattedMessage id="config.tasks.ai_session.button" />
         </Button>
+        <Button
+          variant="outline-warning"
+          className="ml-2"
+          onClick={() => history.push("/scoreboard")}
+        >
+          <FormattedMessage id="scoreboard.heading" />
+        </Button>
       </div>
+      <Achievements />
       <TonightPicks />
       <MoanerOfTheWeek />
+      <RecentScenes />
       {showSession && (
         <AISessionBuildDialog onClose={() => setShowSession(false)} />
       )}

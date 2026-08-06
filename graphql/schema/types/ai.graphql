@@ -535,6 +535,10 @@ input AISessionBuildInput {
   vibe: String
   "Maximum number of scenes. Default 20."
   limit: Int
+  "Session ordering: build_up (peak at the end), peak_first, or empty for score order."
+  ordering: String
+  "Ritual: an ordered mood sequence. The plan cycles through the moods, each steam-ordered."
+  ritual: [String!]
 }
 
 type AISessionScene {
@@ -549,4 +553,18 @@ type AISessionScene {
 type AISessionPlan {
   scenes: [AISessionScene!]!
   total_minutes: Float!
+}
+
+type AISavedMoment {
+  marker_id: ID!
+  seconds: Float!
+  title: String!
+  screenshot: String!
+  created_at: Time!
+  scene: Scene!
+}
+
+type AIOHistoryTimelineEntry {
+  date: String!
+  count: Int!
 }

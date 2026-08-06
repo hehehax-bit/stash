@@ -430,3 +430,23 @@ query AiSessionBuild($input: AISessionBuildInput!) {
     }
   }
 }
+
+query AiSavedMoments {
+  aiSavedMoments {
+    marker_id
+    seconds
+    title
+    screenshot
+    created_at
+    scene {
+      ...SceneData
+    }
+  }
+}
+
+query AiOHistoryTimeline($days: Int) {
+  aiOHistoryTimeline(days: $days) {
+    date
+    count
+  }
+}

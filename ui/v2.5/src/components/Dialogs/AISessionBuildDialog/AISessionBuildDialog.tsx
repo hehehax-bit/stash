@@ -24,6 +24,9 @@ export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
   const [duration, setDuration] = useState(30);
   const [minSteam, setMinSteam] = useState(6);
   const [vibe, setVibe] = useState("");
+  const [ordering, setOrdering] = useState("");
+  const [ritualMode, setRitualMode] = useState(false);
+  const [ritualMoods, setRitualMoods] = useState<string[]>([]);
   const [performerIds, setPerformerIds] = useState<string[]>([]);
   const [moods, setMoods] = useState<string[]>([]);
   const [plan, setPlan] = useState<
@@ -43,6 +46,9 @@ export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
             moods: moods.length > 0 ? moods : undefined,
             min_steam: minSteam,
             vibe: vibe.trim() !== "" ? vibe : undefined,
+            ordering: ordering !== "" ? ordering : undefined,
+            ritual:
+              ritualMode && ritualMoods.length > 0 ? ritualMoods : undefined,
           },
         },
       });
@@ -146,7 +152,15 @@ export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
           <Form.Label>
             <FormattedMessage id="config.tasks.ai_session.moods" />
           </Form.Label>
-          <div>
+          <Form.Check
+            type="checkbox"
+            label={intl.formatMessage({
+              id: "config.tasks.ai_session.ritual_mode",
+            })}
+            checked={ritualMode}
+            onChange={() => setRitualMode(!ritualMode)}
+          />
+          <div className="mt-2">
             {(moodGroupsData?.aiMoodGroups ?? []).map((g) => (
               <Form.Check
                 key={g.mood}
@@ -160,11 +174,53 @@ export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
                       ? prev.filter((m) => m !== g.mood)
                       : [...prev, g.mood]
                   );
+                  setRitualMoods((prev) =>
+                    prev.includes(g.mood)
+                      ? prev.filter((m) => m !== g.mood)
+                      : [...prev, g.mood]
+                  );
                 }}
               />
             ))}
           </div>
+          {ritualMode && ritualMoods.length > 0 && (
+            <Form.Text className="text-muted">
+              <FormattedMessage id="config.tasks.ai_session.ritual_order" />:{" "}
+              {ritualMoods.join(" → ")}
+            </Form.Text>
+          )}
         </Form.Group>
+
+        {!ritualMode && (
+          <Form.Group>
+            <Form.Label>
+              <FormattedMessage id="config.tasks.ai_session.ordering" />
+            </Form.Label>
+            <Form.Control
+              as="select"
+              value={ordering}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                setOrdering(e.currentTarget.value)
+              }
+            >
+              <option value="">
+                {intl.formatMessage({
+                  id: "config.tasks.ai_session.ordering_default",
+                })}
+              </option>
+              <option value="build_up">
+                {intl.formatMessage({
+                  id: "config.tasks.ai_session.ordering_build_up",
+                })}
+              </option>
+              <option value="peak_first">
+                {intl.formatMessage({
+                  id: "config.tasks.ai_session.ordering_peak_first",
+                })}
+              </option>
+            </Form.Control>
+          </Form.Group>
+        )}
 
         <Form.Group>
           <Form.Label>
@@ -201,6 +257,9 @@ export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
             {plan.scenes.map((s) => (
               <li key={s.scene_id}>
                 {s.title || s.scene_id} · 🔥 {s.steam} ·{" "}
+                {intl.formatMessage({
+                  id: "config.tasks.ai_session.duration_label",
+                })}{" "}
                 {Math.round(s.duration)}s
                 {s.best_moment > 0 && ` · best @ ${Math.round(s.best_moment)}s`}
               </li>

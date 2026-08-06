@@ -39,6 +39,13 @@ func (j *GenerateGoonReelJob) Execute(ctx context.Context, progress *job.Progres
 	}
 
 	r := instance.Repository
+
+	return r.WithDB(ctx, func(ctx context.Context) error {
+		return j.run(ctx, r)
+	})
+}
+
+func (j *GenerateGoonReelJob) run(ctx context.Context, r models.Repository) error {
 	clipsDir := filepath.Join(instance.Config.GetConfigPath(), "clips")
 	if err := os.MkdirAll(clipsDir, 0755); err != nil {
 		return fmt.Errorf("creating clips directory: %w", err)

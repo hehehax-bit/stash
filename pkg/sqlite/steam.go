@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/stashapp/stash/pkg/models"
 )
@@ -67,6 +68,30 @@ func (s *SceneStore) OHistoryLeaderboard(ctx context.Context, limit int) ([]*mod
 	for rows.Next() {
 		var e models.AOHistoryLeaderboardEntry
 		if err := rows.Scan(&e.PerformerID, &e.OScenes); err != nil {
+			return nil, err
+		}
+		out = append(out, &e)
+	}
+	return out, rows.Err()
+}
+
+// OHistoryTimeline returns the number of logged O dates per day for the last
+// N days.
+func (s *SceneStore) OHistoryTimeline(ctx context.Context, days int) ([]*models.AIOHistoryTimelineEntry, error) {
+	rows, err := dbWrapper.Queryx(ctx, `
+		SELECT date(o_date) AS day, COUNT(*) FROM scenes_o_dates
+		WHERE o_date >= datetime('now', ?)
+		GROUP BY date(o_date)
+		ORDER BY day`, fmt.Sprintf("-%d days", days))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []*models.AIOHistoryTimelineEntry
+	for rows.Next() {
+		var e models.AIOHistoryTimelineEntry
+		if err := rows.Scan(&e.Date, &e.Count); err != nil {
 			return nil, err
 		}
 		out = append(out, &e)

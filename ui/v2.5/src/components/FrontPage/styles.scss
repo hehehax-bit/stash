@@ -538,3 +538,17 @@
 .for-you-crown {
   font-size: 1.4rem;
 }
+
+// equal-height cards in the For You rows
+.for-you-row {
+  .col-6,
+  .col-sm-4,
+  .col-md-3,
+  .col-xl-2 {
+    display: flex;
+  }
+
+  .scene-card {
+    height: 100%;
+  }
+}

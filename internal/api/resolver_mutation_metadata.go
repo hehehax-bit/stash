@@ -12,6 +12,7 @@ import (
 	"github.com/stashapp/stash/internal/manager/config"
 	"github.com/stashapp/stash/internal/manager/task"
 	"github.com/stashapp/stash/pkg/logger"
+	"github.com/stashapp/stash/pkg/models"
 )
 
 func (r *mutationResolver) MetadataScan(ctx context.Context, input manager.ScanMetadataInput) (string, error) {
@@ -211,6 +212,34 @@ func (r *mutationResolver) MetadataAIMoodTag(ctx context.Context, input AIMoodIn
 		return "", err
 	}
 	return strconv.Itoa(jobID), nil
+}
+
+func (r *mutationResolver) AiSaveMoment(ctx context.Context, markerID string) (bool, error) {
+	id, err := strconv.Atoi(markerID)
+	if err != nil {
+		return false, fmt.Errorf("converting marker id: %w", err)
+	}
+
+	if err := manager.GetInstance().Repository.WithTxn(ctx, func(ctx context.Context) error {
+		return manager.GetInstance().Repository.AISavedMoment.Create(ctx, &models.AISavedMoment{MarkerID: id})
+	}); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (r *mutationResolver) AiUnsaveMoment(ctx context.Context, markerID string) (bool, error) {
+	id, err := strconv.Atoi(markerID)
+	if err != nil {
+		return false, fmt.Errorf("converting marker id: %w", err)
+	}
+
+	if err := manager.GetInstance().Repository.WithTxn(ctx, func(ctx context.Context) error {
+		return manager.GetInstance().Repository.AISavedMoment.DeleteByMarkerID(ctx, id)
+	}); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (r *mutationResolver) MetadataGenerateGoonReel(ctx context.Context, sceneIDs []string, durationPerScene *int) (string, error) {

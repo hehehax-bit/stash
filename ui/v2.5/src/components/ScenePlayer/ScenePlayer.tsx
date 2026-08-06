@@ -225,6 +225,8 @@ interface IScenePlayerProps {
   permitLoop?: boolean;
   initialTimestamp: number;
   sendSetTimestamp: (setTimestamp: (value: number) => void) => void;
+  sendPause?: (pause: () => void) => void;
+  sendPlay?: (play: () => void) => void;
   onComplete: () => void;
   onNext: () => void;
   onPrevious: () => void;
@@ -239,6 +241,8 @@ export const ScenePlayer: React.FC<IScenePlayerProps> = PatchComponent(
     permitLoop = true,
     initialTimestamp: _initialTimestamp,
     sendSetTimestamp,
+    sendPause,
+    sendPlay,
     onComplete,
     onNext,
     onPrevious,
@@ -320,6 +324,28 @@ export const ScenePlayer: React.FC<IScenePlayerProps> = PatchComponent(
 
       return () => window.removeEventListener("resize", onResize);
     }, [hideScrubberOverride, fullscreen]);
+
+    useEffect(() => {
+      sendPause?.(() => {
+        const player = getPlayer();
+        if (player?.hasStarted()) {
+          // exit fullscreen first so the edging overlay stays visible
+          if (player.isFullscreen()) {
+            player.exitFullscreen();
+          }
+          player.pause();
+        }
+      });
+    }, [sendPause, getPlayer]);
+
+    useEffect(() => {
+      sendPlay?.(() => {
+        const player = getPlayer();
+        if (player?.hasStarted()) {
+          player.play();
+        }
+      });
+    }, [sendPlay, getPlayer]);
 
     useEffect(() => {
       sendSetTimestamp((value: number) => {
@@ -417,6 +443,7 @@ export const ScenePlayer: React.FC<IScenePlayerProps> = PatchComponent(
       const videoEl = document.createElement("video-js");
       videoEl.setAttribute("data-vjs-player", "true");
       videoEl.setAttribute("crossorigin", "anonymous");
+      videoEl.setAttribute("playsinline", "true");
       videoEl.classList.add("vjs-big-play-centered");
       videoRef.current!.appendChild(videoEl);
 

@@ -3008,6 +3008,18 @@ export const mutateMetadataAIMoodTag = (input: GQL.AiMoodInput) =>
     variables: { input },
   });
 
+export const mutateAiSaveMoment = (markerId: string) =>
+  client.mutate<GQL.AiSaveMomentMutation>({
+    mutation: GQL.AiSaveMomentDocument,
+    variables: { marker_id: markerId },
+  });
+
+export const mutateAiUnsaveMoment = (markerId: string) =>
+  client.mutate<GQL.AiUnsaveMomentMutation>({
+    mutation: GQL.AiUnsaveMomentDocument,
+    variables: { marker_id: markerId },
+  });
+
 export const mutateMetadataGenerateGoonReel = (
   sceneIds: string[],
   durationPerScene?: number

@@ -1009,8 +1009,19 @@ input[type="range"].blue-slider {
 }
 
 .scene-roulette-bar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
   padding: 0.5rem 0;
   text-align: center;
+
+  .btn,
+  .dropdown,
+  .edge-interval-select {
+    margin-left: 0;
+  }
 }
 
 .climax-map {
@@ -1028,4 +1039,63 @@ input[type="range"].blue-slider {
   bottom: 0;
   cursor: pointer;
   position: absolute;
+}
+
+.edging-overlay {
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  justify-content: center;
+  position: absolute;
+  z-index: 20;
+}
+
+.scene-player-container {
+  position: relative;
+}
+
+.edge-interval-select {
+  display: inline-block;
+  margin-left: 0.5rem;
+  width: auto;
+}
+
+.blind-goon {
+  .vjs-tech,
+  video,
+  img {
+    filter: blur(24px);
+  }
+}
+
+.climax-peak.saved {
+  background: linear-gradient(to top, #e91e63, #ff4081);
+}
+
+.climax-heart {
+  cursor: pointer;
+  font-size: 0.8rem;
+  left: 50%;
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+}
+
+.saved-moment {
+  cursor: pointer;
+
+  img {
+    border-radius: 0.25rem;
+    width: 100%;
+  }
+}
+
+.saved-moment-title {
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

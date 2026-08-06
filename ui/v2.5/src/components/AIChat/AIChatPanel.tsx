@@ -718,8 +718,22 @@ const AIChatPanel: React.FC = () => {
   const [deleteMessage] = GQL.useAiChatDeleteMessageMutation();
 
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [watchingId, setWatchingId] = useState<string | null>(null);
   const [useLibraryContext, setUseLibraryContext] = useState(true);
   const [input, setInput] = useState("");
+
+  // watch-along: opened from a scene player with ?watching=<sceneId>
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const watching = params.get("watching");
+    setWatchingId(watching && watching !== "" ? watching : null);
+  }, [location.search]);
+
+  const { data: watchingData } = GQL.useFindSceneQuery({
+    variables: { id: watchingId ?? "" },
+    skip: !watchingId,
+  });
+  const watchingTitle = watchingData?.findScene?.title;
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -805,6 +819,13 @@ const AIChatPanel: React.FC = () => {
     const text = messageData?.text ?? input.trim();
     const image = messageData?.image ?? imageBase64;
     if (!text && !image) return;
+
+    // watch-along: keep the chat aware of what is playing
+    const watchingNote =
+      watchingId && watchingTitle
+        ? `\n\n[I am currently watching this scene: "${watchingTitle}" (id ${watchingId}) — answer as if you are watching along with me.]`
+        : "";
+    const finalText = watchingNote !== "" ? text + watchingNote : text;
     if (!messageData) {
       setInput("");
       inputRef.current?.focus();
@@ -815,7 +836,7 @@ const AIChatPanel: React.FC = () => {
       id: `opt-${Date.now()}`,
       session_id: activeSessionId ?? "",
       role: "user",
-      content: text || "[image]",
+      content: finalText || "[image]",
       created_at: new Date().toISOString(),
       isOptimistic: true,
       pendingImage: image,
@@ -828,7 +849,7 @@ const AIChatPanel: React.FC = () => {
         variables: {
           input: {
             session_id: activeSessionId,
-            message: text,
+            message: finalText,
             image: image,
             use_library_context: useLibraryContext,
           },

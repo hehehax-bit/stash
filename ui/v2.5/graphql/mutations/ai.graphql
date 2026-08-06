@@ -196,3 +196,11 @@ mutation MetadataGenerateGoonReel(
     duration_per_scene: $duration_per_scene
   )
 }
+
+mutation AiSaveMoment($marker_id: ID!) {
+  aiSaveMoment(marker_id: $marker_id)
+}
+
+mutation AiUnsaveMoment($marker_id: ID!) {
+  aiUnsaveMoment(marker_id: $marker_id)
+}

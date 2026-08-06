@@ -16,6 +16,13 @@ type AISessionBuildInput struct {
 	MinSteam        *int     `json:"min_steam"`
 	Vibe            string   `json:"vibe"`
 	Limit           *int     `json:"limit"`
+	// Ordering: "build_up" (lowest steam first, peaking at the end),
+	// "peak_first" (highest steam first), or empty for score order.
+	Ordering string `json:"ordering"`
+	// Ritual: an ordered mood sequence. When set, the plan is built by
+	// cycling through the moods (each internally steam-ordered) until the
+	// duration budget is filled.
+	Ritual []string `json:"ritual"`
 }
 
 type AISessionScene struct {
@@ -33,6 +40,19 @@ type AISessionScene struct {
 func (s *Manager) AIBuildSession(ctx context.Context, input AISessionBuildInput) ([]AISessionScene, float64, error) {
 	r := s.Repository
 
+	var plan []AISessionScene
+	var totalMinutes float64
+	var buildErr error
+	if err := r.WithDB(ctx, func(ctx context.Context) error {
+		plan, totalMinutes, buildErr = s.buildSessionInDB(ctx, r, input)
+		return buildErr
+	}); err != nil {
+		return nil, 0, err
+	}
+	return plan, totalMinutes, nil
+}
+
+func (s *Manager) buildSessionInDB(ctx context.Context, r models.Repository, input AISessionBuildInput) ([]AISessionScene, float64, error) {
 	minSteam := 6
 	if input.MinSteam != nil {
 		minSteam = *input.MinSteam
@@ -40,6 +60,10 @@ func (s *Manager) AIBuildSession(ctx context.Context, input AISessionBuildInput)
 	maxScenes := 20
 	if input.Limit != nil && *input.Limit > 0 {
 		maxScenes = *input.Limit
+	}
+
+	if len(input.Ritual) > 0 {
+		return s.buildRitualPlan(ctx, r, input, maxScenes, minSteam)
 	}
 
 	filter := &models.SceneFilterType{
@@ -199,6 +223,135 @@ func (s *Manager) AIBuildSession(ctx context.Context, input AISessionBuildInput)
 
 	if len(plan) == 0 {
 		return nil, 0, fmt.Errorf("no scenes match the session criteria")
+	}
+
+	switch input.Ordering {
+	case "build_up":
+		sort.Slice(plan, func(i, j int) bool { return plan[i].Steam < plan[j].Steam })
+	case "peak_first":
+		sort.Slice(plan, func(i, j int) bool { return plan[i].Steam > plan[j].Steam })
+	}
+
+	return plan, total / 60, nil
+}
+
+// buildRitualPlan builds a plan by cycling through the ritual mood sequence,
+// each mood's scenes ordered by steam ascending, until the duration budget is
+// filled. Scenes already in the plan are skipped.
+func (s *Manager) buildRitualPlan(ctx context.Context, r models.Repository, input AISessionBuildInput, maxScenes, minSteam int) ([]AISessionScene, float64, error) {
+	budget := float64(input.DurationMinutes) * 60
+	var plan []AISessionScene
+	total := 0.0
+	inPlan := map[int]bool{}
+
+	for len(plan) < maxScenes && total < budget {
+		for _, mood := range input.Ritual {
+			if len(plan) >= maxScenes || total >= budget {
+				break
+			}
+
+			filter := &models.SceneFilterType{
+				SteamScore: &models.IntCriterionInput{
+					Value:    minSteam,
+					Modifier: models.CriterionModifierGreaterThan,
+				},
+				Moods: &models.MultiCriterionInput{
+					Value:    []string{mood},
+					Modifier: models.CriterionModifierIncludes,
+				},
+			}
+
+			perPage := -1
+			var candidates []*models.Scene
+			var steamScores map[int]int
+			if err := r.WithReadTxn(ctx, func(ctx context.Context) error {
+				result, err := r.Scene.Query(ctx, models.SceneQueryOptions{
+					SceneFilter: filter,
+					QueryOptions: models.QueryOptions{
+						FindFilter: &models.FindFilterType{PerPage: &perPage},
+					},
+				})
+				if err != nil {
+					return err
+				}
+				candidates, err = result.Resolve(ctx)
+				if err != nil {
+					return err
+				}
+				ids := make([]int, len(candidates))
+				for i, c := range candidates {
+					ids[i] = c.ID
+				}
+				steamScores, err = r.Scene.GetSteamScores(ctx, ids)
+				return err
+			}); err != nil {
+				return nil, 0, fmt.Errorf("querying ritual scenes: %w", err)
+			}
+
+			// steam ascending within the mood
+			sort.Slice(candidates, func(i, j int) bool {
+				return steamScores[candidates[i].ID] < steamScores[candidates[j].ID]
+			})
+
+			for _, sc := range candidates {
+				if len(plan) >= maxScenes || total >= budget {
+					break
+				}
+				if inPlan[sc.ID] {
+					continue
+				}
+
+				duration := 0.0
+				if err := sc.LoadPrimaryFile(ctx, r.File); err == nil {
+					if f := sc.Files.Primary(); f != nil {
+						duration = f.Duration
+					}
+				}
+				contrib := duration
+				if contrib > 120 {
+					contrib = 120
+				}
+				if contrib <= 0 {
+					contrib = 60
+				}
+
+				bestMoment := 0.0
+				perScene := 100
+				_ = r.WithReadTxn(ctx, func(ctx context.Context) error {
+					markers, _, err := r.SceneMarker.Query(ctx, &models.SceneMarkerFilterType{
+						Scenes: &models.MultiCriterionInput{
+							Value:    []string{fmt.Sprintf("%d", sc.ID)},
+							Modifier: models.CriterionModifierIncludes,
+						},
+					}, &models.FindFilterType{PerPage: &perScene})
+					if err != nil {
+						return err
+					}
+					var bestIntensity float64
+					for _, m := range markers {
+						if m.Intensity != nil && *m.Intensity > bestIntensity {
+							bestIntensity = *m.Intensity
+							bestMoment = m.Seconds
+						}
+					}
+					return nil
+				})
+
+				plan = append(plan, AISessionScene{
+					SceneID:    sc.ID,
+					Title:      sc.Title,
+					Duration:   duration,
+					Steam:      steamScores[sc.ID],
+					BestMoment: bestMoment,
+				})
+				inPlan[sc.ID] = true
+				total += contrib
+			}
+		}
+	}
+
+	if len(plan) == 0 {
+		return nil, 0, fmt.Errorf("no scenes match the ritual moods")
 	}
 
 	return plan, total / 60, nil

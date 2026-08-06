@@ -272,6 +272,87 @@ type AISessionPlan struct {
 	TotalMinutes float64          `json:"total_minutes"`
 }
 
+type AISavedMoment struct {
+	MarkerID   string        `json:"marker_id"`
+	Seconds    float64       `json:"seconds"`
+	Title      string        `json:"title"`
+	Screenshot string        `json:"screenshot"`
+	CreatedAt  time.Time     `json:"created_at"`
+	Scene      *models.Scene `json:"scene,omitempty"`
+}
+
+type AIOHistoryTimelineEntry struct {
+	Date  string `json:"date"`
+	Count int    `json:"count"`
+}
+
+func (r *queryResolver) AiOHistoryTimeline(ctx context.Context, days *int) ([]*AIOHistoryTimelineEntry, error) {
+	n := 30
+	if days != nil && *days > 0 {
+		n = *days
+	}
+
+	var found []*models.AIOHistoryTimelineEntry
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		found, err = r.repository.Scene.OHistoryTimeline(ctx, n)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+
+	out := make([]*AIOHistoryTimelineEntry, 0, len(found))
+	for _, e := range found {
+		out = append(out, &AIOHistoryTimelineEntry{Date: e.Date, Count: e.Count})
+	}
+	return out, nil
+}
+
+func (r *queryResolver) AiSavedMoments(ctx context.Context) ([]*AISavedMoment, error) {
+	baseURL, _ := ctx.Value(BaseURLCtxKey).(string)
+
+	var found []*models.AISavedMoment
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		found, err = r.repository.AISavedMoment.FindAll(ctx)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+
+	out := make([]*AISavedMoment, 0, len(found))
+	for _, s := range found {
+		var marker *models.SceneMarker
+		if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+			var err error
+			marker, err = r.repository.SceneMarker.Find(ctx, s.MarkerID)
+			return err
+		}); err != nil || marker == nil {
+			continue
+		}
+
+		item := &AISavedMoment{
+			MarkerID:  fmt.Sprintf("%d", s.MarkerID),
+			Seconds:   marker.Seconds,
+			Title:     marker.Title,
+			CreatedAt: time.Unix(s.CreatedAt, 0),
+		}
+		item.Screenshot = urlbuilders.NewSceneMarkerURLBuilder(baseURL, marker).GetScreenshotURL()
+		if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+			sc, err := r.repository.Scene.Find(ctx, marker.SceneID)
+			if err == nil {
+				item.Scene = sc
+			}
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+
+	return out, nil
+}
+
 func (r *queryResolver) AiSessionBuild(ctx context.Context, input AISessionBuildInput) (*AISessionPlan, error) {
 	performerIDs := make([]int, len(input.PerformerIds))
 	for i, id := range input.PerformerIds {
@@ -286,6 +367,10 @@ func (r *queryResolver) AiSessionBuild(ctx context.Context, input AISessionBuild
 	if input.Vibe != nil {
 		vibe = *input.Vibe
 	}
+	ordering := ""
+	if input.Ordering != nil {
+		ordering = *input.Ordering
+	}
 
 	scenes, totalMinutes, err := manager.GetInstance().AIBuildSession(ctx, manager.AISessionBuildInput{
 		DurationMinutes: input.DurationMinutes,
@@ -294,6 +379,8 @@ func (r *queryResolver) AiSessionBuild(ctx context.Context, input AISessionBuild
 		MinSteam:        input.MinSteam,
 		Vibe:            vibe,
 		Limit:           input.Limit,
+		Ordering:        ordering,
+		Ritual:          input.Ritual,
 	})
 	if err != nil {
 		return nil, err

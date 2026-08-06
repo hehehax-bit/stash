@@ -36,6 +36,19 @@ Everything added on top of upstream stash. Features are surfaced in **Settings >
 - **Performer discovery**: finds recurring unknown performers in untagged scenes/images; review creates "Unknown Performer N" or merges into existing.
 - All review dialogs have **Apply all / Reject all**.
 
+## The Ascension Update
+
+- **Edging mode**: pause playback after a configurable interval (1-10 min, default 3) with a Continue overlay.
+- **Blind goon**: play a random high-steam scene with the video blurred until it ends.
+- **Vibe radio**: endless shuffled afterglow queue for a chosen mood.
+- **Back for more**: the last ten played scenes on the front page.
+- **Saved moments**: heart any marker; a /saved page collects them and can build a reel from them.
+- **Session ordering**: build-up (peak at the end) or peak-first sessions.
+- **Ritual builder**: a mood sequence that the session cycles through in order.
+- **Watch-along chat**: chat opened from the player knows what you are watching and narrates along.
+- **Goon Scoreboard** (/scoreboard): moaners, O board, streak, saved moments, finish-history timeline.
+- **Achievements**: streaks, performer/play/saved milestones with progress bars on the front page.
+
 ## The Gooner Update
 
 - **Goon mode** (`G` key): filters everything to steam ≥ 6 with a warm tint (settings toggle for the default).

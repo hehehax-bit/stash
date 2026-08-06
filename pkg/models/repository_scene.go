@@ -37,6 +37,7 @@ type SceneQueryer interface {
 	QueryCount(ctx context.Context, sceneFilter *SceneFilterType, findFilter *FindFilterType) (int, error)
 	GetSteamScores(ctx context.Context, sceneIDs []int) (map[int]int, error)
 	OHistoryLeaderboard(ctx context.Context, limit int) ([]*AOHistoryLeaderboardEntry, error)
+	OHistoryTimeline(ctx context.Context, days int) ([]*AIOHistoryTimelineEntry, error)
 }
 
 // SceneCounter provides methods to count scenes.
@@ -156,4 +157,9 @@ type SceneReaderWriter interface {
 type AOHistoryLeaderboardEntry struct {
 	PerformerID int `json:"performer_id"`
 	OScenes     int `json:"o_scenes"`
+}
+
+type AIOHistoryTimelineEntry struct {
+	Date  string `json:"date"`
+	Count int    `json:"count"`
 }

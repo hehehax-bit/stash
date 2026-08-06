@@ -50,6 +50,18 @@ const FEATURE_GROUPS: { heading: string; items: string[] }[] = [
     ],
   },
   {
+    heading: "The Ascension Update",
+    items: [
+      "Edging mode with configurable pause interval",
+      "Blind goon (blurred mystery scenes)",
+      "Vibe radio (endless mood queue)",
+      "Saved moments with favorites page and reel",
+      "Build-up / peak-first session ordering and ritual mood sequences",
+      "Watch-along chat from the player",
+      "Goon Scoreboard page and achievements",
+    ],
+  },
+  {
     heading: "Under the hood",
     items: [
       "Text + visual embeddings with stale-only refresh",
