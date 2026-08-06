@@ -24,6 +24,7 @@ import flattenMessages from "./utils/flattenMessages";
 import * as yup from "yup";
 import Mousetrap from "mousetrap";
 import MousetrapPause from "mousetrap-pause";
+import { GoonModeProvider } from "src/hooks/GoonMode";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MainNavbar } from "./components/MainNavbar";
 import { PageNotFound } from "./components/PageNotFound";
@@ -115,16 +116,35 @@ const MainContainer: React.FC = ({ children }) => {
   // use optional here because the configuration may have be loading or errored
   const { configuration } = useConfigurationContextOptional() || {};
   const { sfwContentMode } = configuration?.interface || {};
+  const [quickHide, setQuickHide] = useState(
+    () => configuration?.ui?.quickHide ?? false
+  );
+  const [goonMode, setGoonMode] = useState(
+    () => configuration?.ui?.goonMode ?? false
+  );
+
+  useEffect(() => {
+    Mousetrap.bind("h", () => setQuickHide((q) => !q));
+    Mousetrap.bind("g", () => setGoonMode((g) => !g));
+    return () => {
+      Mousetrap.unbind("h");
+      Mousetrap.unbind("g");
+    };
+  }, []);
 
   return (
-    <div
-      className={cx("main container-fluid", {
-        apple: appleRendering,
-        "sfw-content-mode": sfwContentMode,
-      })}
-    >
-      {children}
-    </div>
+    <GoonModeProvider goonMode={goonMode} setGoonMode={setGoonMode}>
+      <div
+        className={cx("main container-fluid", {
+          apple: appleRendering,
+          "sfw-content-mode": sfwContentMode,
+          "quick-hide": quickHide,
+          "goon-mode": goonMode,
+        })}
+      >
+        {children}
+      </div>
+    </GoonModeProvider>
   );
 };
 

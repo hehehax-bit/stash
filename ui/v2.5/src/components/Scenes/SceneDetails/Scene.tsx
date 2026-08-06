@@ -22,6 +22,7 @@ import {
   queryFindScenesByID,
   useSceneIncrementPlayCount,
 } from "src/core/StashService";
+import { ModalComponent } from "src/components/Shared/Modal";
 
 import { SceneEditPanel } from "./SceneEditPanel";
 import { ErrorMessage } from "src/components/Shared/ErrorMessage";
@@ -42,6 +43,8 @@ import {
   faEllipsisV,
   faChevronRight,
   faChevronLeft,
+  faDice,
+  faBolt,
 } from "@fortawesome/free-solid-svg-icons";
 import { objectPath, objectTitle } from "src/core/files";
 import { RatingSystem } from "src/components/Shared/Rating/RatingSystem";
@@ -158,6 +161,7 @@ interface IProps {
   setCollapsed: (state: boolean) => void;
   setContinuePlaylist: (value: boolean) => void;
   onRefreshScene: () => Promise<void>;
+  onSessionO?: () => void;
 }
 
 interface ISceneParams {
@@ -247,6 +251,7 @@ const ScenePage: React.FC<IProps> = PatchComponent("ScenePage", (props) => {
   const onIncrementOClick = async () => {
     try {
       await incrementO();
+      props.onSessionO?.();
     } catch (e) {
       Toast.error(e);
     }
@@ -824,6 +829,7 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
   history,
   match,
 }) => {
+  const intl = useIntl();
   const { id } = match.params;
   const { configuration } = useConfigurationContext();
   const { data, loading, error, refetch } = useFindScene(id);
@@ -1043,8 +1049,116 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
     } else if (queueTotal !== 0) {
       const index = Math.floor(Math.random() * queueTotal);
       loadScene(queueScenes[index].id, autoPlay);
+    } else {
+      // no queue context: pick a random scene from the whole library
+      const q = new ListFilterModel(GQL.FilterMode.Scenes);
+      q.sortBy = "random";
+      const queryResults = await queryFindScenes(q);
+      const scenes = queryResults.data.findScenes.scenes;
+      if (scenes.length > 0) {
+        loadScene(scenes[0].id, autoPlay, 1);
+      }
     }
   }
+
+  const [afterglow, setAfterglow] = useState(
+    () => new URLSearchParams(location.search).get("afterglow") === "1"
+  );
+
+  // --- session recap tracking (afterglow mode) ---
+  const SESSION_KEY = "stash.goonSession";
+
+  type SessionLog = {
+    entries: {
+      sceneId: string;
+      title: string;
+      bestMoment: number;
+      at: string;
+    }[];
+    oCount: number;
+  };
+
+  const readSession = useCallback((): SessionLog | null => {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const writeSession = useCallback((session: SessionLog) => {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  }, []);
+
+  const [sessionRecap, setSessionRecap] = useState<SessionLog | null>(null);
+
+  const sceneRef = useRef(scene);
+  sceneRef.current = scene;
+
+  const onSessionO = useCallback(() => {
+    if (!afterglow) return;
+    const session = readSession() ?? { entries: [], oCount: 0 };
+    session.oCount = (session.oCount ?? 0) + 1;
+    writeSession(session);
+  }, [afterglow, readSession, writeSession]);
+
+  function toggleAfterglow() {
+    if (afterglow) {
+      const session = readSession();
+      if (session && session.entries.length > 0) {
+        setSessionRecap(session);
+      }
+      localStorage.removeItem(SESSION_KEY);
+      setAfterglow(false);
+    } else {
+      setAfterglow(true);
+    }
+  }
+  const { data: bestMomentData } = GQL.useAiBestMomentQuery({
+    variables: { scene_id: scene?.id ?? "" },
+    skip: !afterglow || !scene?.id,
+  });
+
+  // keep fresh references so the effect can depend only on the scene
+  const queueNextRef = useRef(queueNext);
+  queueNextRef.current = queueNext;
+  const setTimestampRef = useRef(setTimestamp);
+  setTimestampRef.current = setTimestamp;
+
+  // afterglow (reel) mode: jump to each scene's best moment and advance
+  useEffect(() => {
+    if (!afterglow) return;
+
+    // record this scene in the session log
+    const current = sceneRef.current;
+    if (current?.id) {
+      const session = readSession() ?? { entries: [], oCount: 0 };
+      if (
+        !session.entries.some(
+          (e: { sceneId: string }) => e.sceneId === current.id
+        )
+      ) {
+        session.entries.push({
+          sceneId: current.id,
+          title: current.title || current.id,
+          bestMoment: bestMomentData?.aiBestMoment ?? 0,
+          at: new Date().toISOString(),
+        });
+        writeSession(session);
+      }
+    }
+
+    const best = bestMomentData?.aiBestMoment;
+    if (best !== null && best !== undefined) {
+      setTimestampRef.current(best);
+    }
+
+    const timer = setTimeout(() => {
+      queueNextRef.current(true);
+    }, 45000);
+    return () => clearTimeout(timer);
+  }, [afterglow, bestMomentData, readSession, writeSession]);
 
   function onComplete() {
     // load the next scene if we're continuing
@@ -1099,6 +1213,7 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
         onQueuePrevious={() => queuePrevious(autoPlayOnSelected)}
         onQueueRandom={() => queueRandom(autoPlayOnSelected)}
         onQueueSceneClicked={onQueueSceneClicked}
+        onSessionO={onSessionO}
         continuePlaylist={continuePlaylist}
         queueHasMoreScenes={queueHasMoreScenes}
         onQueueLessScenes={onQueueLessScenes}
@@ -1109,6 +1224,23 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
         onRefreshScene={onRefreshScene}
       />
       <div className={`scene-player-container ${collapsed ? "expanded" : ""}`}>
+        <div className="scene-roulette-bar">
+          <Button
+            variant="danger"
+            onClick={() => queueRandom(autoPlayOnSelected)}
+          >
+            <Icon icon={faDice} />{" "}
+            <FormattedMessage id="scene_roulette.button" />
+          </Button>
+          <Button
+            variant={afterglow ? "primary" : "outline-primary"}
+            className="ml-2"
+            onClick={() => toggleAfterglow()}
+          >
+            <Icon icon={faBolt} />{" "}
+            <FormattedMessage id="scene_roulette.afterglow" />
+          </Button>
+        </div>
         <ScenePlayer
           key="ScenePlayer"
           scene={scene}
@@ -1122,6 +1254,43 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
           onPrevious={() => queuePrevious(true)}
         />
       </div>
+
+      {sessionRecap && (
+        <ModalComponent
+          show
+          icon={faBolt}
+          header={intl.formatMessage({ id: "scene_roulette.recap" })}
+          onHide={() => setSessionRecap(null)}
+          cancel={{
+            onClick: () => setSessionRecap(null),
+            text: intl.formatMessage({ id: "actions.close" }),
+            variant: "secondary",
+          }}
+        >
+          <div>
+            <p>
+              <FormattedMessage id="scene_roulette.recap_scenes" />:{" "}
+              <strong>{sessionRecap.entries.length}</strong> ·{" "}
+              <FormattedMessage id="scene_roulette.recap_o" />:{" "}
+              <strong>{sessionRecap.oCount}</strong>{" "}
+              {sessionRecap.oCount > 0 ? "💦" : ""}
+            </p>
+            <ul className="mb-0">
+              {sessionRecap.entries.map((e) => (
+                <li key={e.sceneId}>
+                  {e.title}
+                  {e.bestMoment > 0 && (
+                    <span className="text-muted">
+                      {" "}
+                      · best @ {Math.round(e.bestMoment)}s
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </ModalComponent>
+      )}
     </div>
   );
 };

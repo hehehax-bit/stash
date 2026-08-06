@@ -1007,3 +1007,25 @@ input[type="range"].blue-slider {
     }
   }
 }
+
+.scene-roulette-bar {
+  padding: 0.5rem 0;
+  text-align: center;
+}
+
+.climax-map {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 0.25rem;
+  height: 42px;
+  margin: 0.5rem 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.climax-peak {
+  background: linear-gradient(to top, #ff5722, #ff9800);
+  border-radius: 2px 2px 0 0;
+  bottom: 0;
+  cursor: pointer;
+  position: absolute;
+}

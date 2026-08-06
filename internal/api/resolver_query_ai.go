@@ -2,7 +2,9 @@ package api
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -184,6 +186,237 @@ func (r *queryResolver) AiPerformerAppearances(ctx context.Context, performerID 
 		}
 
 		out = append(out, appearance)
+	}
+
+	return out, nil
+}
+
+type AIPerformerAudioStats struct {
+	ScenesWithAudio int     `json:"scenes_with_audio"`
+	MoanScenes      int     `json:"moan_scenes"`
+	MoanRate        float64 `json:"moan_rate"`
+	AvgSilence      float64 `json:"avg_silence"`
+	AvgDuration     float64 `json:"avg_duration"`
+}
+
+type AIOHistoryLeaderboardEntry struct {
+	Performer *models.Performer `json:"performer,omitempty"`
+	OScenes   int               `json:"o_scenes"`
+}
+
+type AIMoodGroup struct {
+	Mood       string `json:"mood"`
+	SceneCount int    `json:"scene_count"`
+}
+
+func (r *queryResolver) AiMoodGroups(ctx context.Context) ([]*AIMoodGroup, error) {
+	var found []*models.AIMoodCount
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		found, err = r.repository.AIMood.MoodCounts(ctx)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+
+	out := make([]*AIMoodGroup, 0, len(found))
+	for _, e := range found {
+		out = append(out, &AIMoodGroup{Mood: e.Mood, SceneCount: e.Count})
+	}
+	return out, nil
+}
+
+func (r *queryResolver) AiOHistoryLeaderboard(ctx context.Context, limit *int) ([]*AIOHistoryLeaderboardEntry, error) {
+	maxResults := 10
+	if limit != nil && *limit > 0 {
+		maxResults = *limit
+	}
+
+	var found []*models.AOHistoryLeaderboardEntry
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		found, err = r.repository.Scene.OHistoryLeaderboard(ctx, maxResults)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+
+	out := make([]*AIOHistoryLeaderboardEntry, 0, len(found))
+	for _, e := range found {
+		entry := &AIOHistoryLeaderboardEntry{OScenes: e.OScenes}
+		if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+			p, err := r.repository.Performer.Find(ctx, e.PerformerID)
+			if err == nil {
+				entry.Performer = p
+			}
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+		out = append(out, entry)
+	}
+
+	return out, nil
+}
+
+type AISessionScene struct {
+	SceneID    string  `json:"scene_id"`
+	Title      string  `json:"title"`
+	Duration   float64 `json:"duration"`
+	Steam      int     `json:"steam"`
+	BestMoment float64 `json:"best_moment"`
+}
+
+type AISessionPlan struct {
+	Scenes       []AISessionScene `json:"scenes"`
+	TotalMinutes float64          `json:"total_minutes"`
+}
+
+func (r *queryResolver) AiSessionBuild(ctx context.Context, input AISessionBuildInput) (*AISessionPlan, error) {
+	performerIDs := make([]int, len(input.PerformerIds))
+	for i, id := range input.PerformerIds {
+		n, err := strconv.Atoi(id)
+		if err != nil {
+			return nil, fmt.Errorf("converting performer id: %w", err)
+		}
+		performerIDs[i] = n
+	}
+
+	vibe := ""
+	if input.Vibe != nil {
+		vibe = *input.Vibe
+	}
+
+	scenes, totalMinutes, err := manager.GetInstance().AIBuildSession(ctx, manager.AISessionBuildInput{
+		DurationMinutes: input.DurationMinutes,
+		PerformerIDs:    performerIDs,
+		Moods:           input.Moods,
+		MinSteam:        input.MinSteam,
+		Vibe:            vibe,
+		Limit:           input.Limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	out := &AISessionPlan{TotalMinutes: totalMinutes}
+	for _, sc := range scenes {
+		out.Scenes = append(out.Scenes, AISessionScene{
+			SceneID:    fmt.Sprintf("%d", sc.SceneID),
+			Title:      sc.Title,
+			Duration:   sc.Duration,
+			Steam:      sc.Steam,
+			BestMoment: sc.BestMoment,
+		})
+	}
+	return out, nil
+}
+
+func (r *queryResolver) AiBestMoment(ctx context.Context, sceneID string) (*float64, error) {
+	if _, err := strconv.Atoi(sceneID); err != nil {
+		return nil, fmt.Errorf("converting scene id: %w", err)
+	}
+
+	var best *float64
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		perPage := 100
+		markers, _, err := r.repository.SceneMarker.Query(ctx, &models.SceneMarkerFilterType{
+			Scenes: &models.MultiCriterionInput{
+				Value:    []string{sceneID},
+				Modifier: models.CriterionModifierIncludes,
+			},
+		}, &models.FindFilterType{PerPage: &perPage})
+		if err != nil {
+			return err
+		}
+
+		var bestIntensity float64
+		for _, m := range markers {
+			if m.Intensity != nil && *m.Intensity > bestIntensity {
+				bestIntensity = *m.Intensity
+				seconds := m.Seconds
+				best = &seconds
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return best, nil
+}
+
+func (r *queryResolver) AiPerformerAudioStats(ctx context.Context, performerID string) (*AIPerformerAudioStats, error) {
+	id, err := strconv.Atoi(performerID)
+	if err != nil {
+		return nil, fmt.Errorf("converting performer id: %w", err)
+	}
+
+	var stats *models.AIPerformerAudioStats
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		stats, err = r.repository.AISceneAudio.StatsByPerformer(ctx, id)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+	if stats == nil {
+		stats = &models.AIPerformerAudioStats{}
+	}
+
+	return &AIPerformerAudioStats{
+		ScenesWithAudio: stats.ScenesWithAudio,
+		MoanScenes:      stats.MoanScenes,
+		MoanRate:        stats.MoanRate,
+		AvgSilence:      stats.AvgSilence,
+		AvgDuration:     stats.AvgDuration,
+	}, nil
+}
+
+type AIMoanLeaderboardEntry struct {
+	Performer  *models.Performer `json:"performer,omitempty"`
+	Scenes     int               `json:"scenes"`
+	MoanScenes int               `json:"moan_scenes"`
+	MoanRate   float64           `json:"moan_rate"`
+	AvgSilence float64           `json:"avg_silence"`
+}
+
+func (r *queryResolver) AiMoanLeaderboard(ctx context.Context, limit *int) ([]*AIMoanLeaderboardEntry, error) {
+	maxResults := 10
+	if limit != nil && *limit > 0 {
+		maxResults = *limit
+	}
+
+	var found []*models.AIMoanLeaderboardEntry
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		found, err = r.repository.AISceneAudio.MoanLeaderboard(ctx, maxResults)
+		if err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	out := make([]*AIMoanLeaderboardEntry, 0, len(found))
+	for _, e := range found {
+		entry := &AIMoanLeaderboardEntry{
+			Scenes:     e.Scenes,
+			MoanScenes: e.MoanScenes,
+			MoanRate:   e.MoanRate,
+			AvgSilence: e.AvgSilence,
+		}
+		if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+			p, err := r.repository.Performer.Find(ctx, e.PerformerID)
+			if err == nil {
+				entry.Performer = p
+			}
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+		out = append(out, entry)
 	}
 
 	return out, nil
@@ -997,11 +1230,12 @@ func (r *queryResolver) SimilarToEntity(ctx context.Context, entityType string, 
 		var err error
 		queryEmbedding, err = r.repository.Embedding.FindByEntity(ctx, entityType, id, embedModel)
 		return err
-	}); err != nil {
+	}); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
 	if queryEmbedding == nil {
-		return nil, fmt.Errorf("entity %s %d has no embedding for model %s; generate embeddings first", entityType, id, embedModel)
+		// no embedding for this entity: nothing to compare against
+		return []*SemanticSearchResult{}, nil
 	}
 
 	maxResults := 20

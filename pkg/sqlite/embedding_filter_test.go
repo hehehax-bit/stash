@@ -328,3 +328,165 @@ func TestSceneMarkerFindByPerformerIDs(t *testing.T) {
 		return nil
 	})
 }
+
+func TestAISceneAudioPerformerStats(t *testing.T) {
+	withRollbackTxn(func(ctx context.Context) error {
+		// attach audio analysis to a scene of the performer
+		sceneID := sceneIDs[sceneIdxWithPerformer]
+		require.NoError(t, db.AISceneAudio.Upsert(ctx, &models.AISceneAudio{
+			SceneID:      sceneID,
+			HasAudio:     true,
+			Moans:        true,
+			SilenceRatio: 20,
+			Transcript:   "test",
+		}))
+
+		pid := performerIDs[performerIdxWithScene]
+		stats, err := db.AISceneAudio.StatsByPerformer(ctx, pid)
+		require.NoError(t, err)
+		require.NotNil(t, stats)
+		assert.GreaterOrEqual(t, stats.ScenesWithAudio, 1)
+		assert.GreaterOrEqual(t, stats.MoanScenes, 1)
+		assert.InDelta(t, 1.0, stats.MoanRate, 0.001)
+		assert.InDelta(t, 20, stats.AvgSilence, 0.001)
+
+		lb, err := db.AISceneAudio.MoanLeaderboard(ctx, 5)
+		require.NoError(t, err)
+		require.NotEmpty(t, lb)
+		found := false
+		for _, e := range lb {
+			if e.PerformerID == pid && e.MoanScenes > 0 {
+				found = true
+			}
+		}
+		assert.True(t, found, "performer with moaning scene must be in the leaderboard")
+
+		return nil
+	})
+}
+
+func TestGetSteamScores(t *testing.T) {
+	withRollbackTxn(func(ctx context.Context) error {
+		require.NoError(t, db.AISceneAudio.Upsert(ctx, &models.AISceneAudio{
+			SceneID:      sceneIDs[sceneIdxWithTag],
+			HasAudio:     true,
+			Moans:        true,
+			SilenceRatio: 10,
+		}))
+
+		scores, err := db.Scene.GetSteamScores(ctx, []int{sceneIDs[sceneIdxWithTag], sceneIDs[sceneIdxWithGroup]})
+		require.NoError(t, err)
+		// moaning scene with low silence and tags: 4 + 3 + 3 = 10
+		assert.Equal(t, 10, scores[sceneIDs[sceneIdxWithTag]])
+		// scene without audio analysis: 0
+		assert.Equal(t, 0, scores[sceneIDs[sceneIdxWithGroup]])
+
+		empty, err := db.Scene.GetSteamScores(ctx, []int{})
+		require.NoError(t, err)
+		assert.Empty(t, empty)
+
+		return nil
+	})
+}
+
+func TestAIMoodStore(t *testing.T) {
+	withRollbackTxn(func(ctx context.Context) error {
+		require.NoError(t, db.AIMood.Create(ctx, &models.AISceneMood{SceneID: sceneIDs[sceneIdxWithTag], Mood: "rough", Confidence: 0.9}))
+		require.NoError(t, db.AIMood.Create(ctx, &models.AISceneMood{SceneID: sceneIDs[sceneIdxWithTag], Mood: "amateur", Confidence: 0.7}))
+
+		moods, err := db.AIMood.FindBySceneID(ctx, sceneIDs[sceneIdxWithTag])
+		require.NoError(t, err)
+		require.Len(t, moods, 2)
+		assert.Equal(t, "rough", moods[0].Mood)
+
+		ids, err := db.AIMood.FindMoods(ctx, "rough", 10)
+		require.NoError(t, err)
+		require.Len(t, ids, 1)
+		assert.Equal(t, sceneIDs[sceneIdxWithTag], ids[0])
+
+		require.NoError(t, db.AIMood.DeleteBySceneID(ctx, sceneIDs[sceneIdxWithTag]))
+		remaining, err := db.AIMood.FindBySceneID(ctx, sceneIDs[sceneIdxWithTag])
+		require.NoError(t, err)
+		assert.Empty(t, remaining)
+
+		return nil
+	})
+}
+
+func TestOHistoryLeaderboard(t *testing.T) {
+	withRollbackTxn(func(ctx context.Context) error {
+		// log an O for a scene of the performer
+		_, err := db.Scene.AddO(ctx, sceneIDs[sceneIdxWithPerformer], []time.Time{time.Now()})
+		require.NoError(t, err)
+
+		lb, err := db.Scene.OHistoryLeaderboard(ctx, 5)
+		require.NoError(t, err)
+		require.NotEmpty(t, lb)
+		found := false
+		for _, e := range lb {
+			if e.PerformerID == performerIDs[performerIdxWithScene] && e.OScenes > 0 {
+				found = true
+			}
+		}
+		assert.True(t, found, "performer of the O scene must be on the board")
+
+		return nil
+	})
+}
+
+func TestSceneSteamAndMoodCriteria(t *testing.T) {
+	withRollbackTxn(func(ctx context.Context) error {
+		// scene with moans, low silence, and tags -> steam 10
+		require.NoError(t, db.AISceneAudio.Upsert(ctx, &models.AISceneAudio{
+			SceneID:      sceneIDs[sceneIdxWithTag],
+			HasAudio:     true,
+			Moans:        true,
+			SilenceRatio: 5,
+		}))
+		require.NoError(t, db.AIMood.Create(ctx, &models.AISceneMood{SceneID: sceneIDs[sceneIdxWithTag], Mood: "rough"}))
+
+		pp := -1
+		filter := &models.SceneFilterType{
+			SteamScore: &models.IntCriterionInput{
+				Value:    6,
+				Modifier: models.CriterionModifierGreaterThan,
+			},
+		}
+		result, err := db.Scene.Query(ctx, models.SceneQueryOptions{
+			SceneFilter: filter,
+			QueryOptions: models.QueryOptions{
+				FindFilter: &models.FindFilterType{PerPage: &pp},
+			},
+		})
+		require.NoError(t, err)
+		scenes, err := result.Resolve(ctx)
+		require.NoError(t, err)
+		assert.Contains(t, sceneIDsToInts(scenes), sceneIDs[sceneIdxWithTag])
+		moodFilter := &models.SceneFilterType{
+			Moods: &models.MultiCriterionInput{
+				Value:    []string{"rough"},
+				Modifier: models.CriterionModifierIncludes,
+			},
+		}
+		result, err = db.Scene.Query(ctx, models.SceneQueryOptions{
+			SceneFilter: moodFilter,
+			QueryOptions: models.QueryOptions{
+				FindFilter: &models.FindFilterType{PerPage: &pp},
+			},
+		})
+		require.NoError(t, err)
+		scenes, err = result.Resolve(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, []int{sceneIDs[sceneIdxWithTag]}, sceneIDsToInts(scenes))
+
+		return nil
+	})
+}
+
+func sceneIDsToInts(scenes []*models.Scene) []int {
+	var out []int
+	for _, s := range scenes {
+		out = append(out, s.ID)
+	}
+	return out
+}

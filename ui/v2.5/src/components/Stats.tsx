@@ -1,6 +1,9 @@
 import React from "react";
 import { useStats } from "src/core/StashService";
 import { FormattedMessage, FormattedNumber } from "react-intl";
+import MoanLeaderboard, {
+  OHistoryBoard,
+} from "src/components/Stats/MoanLeaderboard";
 import { LoadingIndicator } from "src/components/Shared/LoadingIndicator";
 import TextUtils from "src/utils/text";
 import { FileSize } from "./Shared/FileSize";
@@ -145,6 +148,8 @@ export const Stats: React.FC = () => {
           </p>
         </div>
       </div>
+      {!sfwContentMode && <MoanLeaderboard />}
+      {!sfwContentMode && <OHistoryBoard />}
     </div>
   );
 };

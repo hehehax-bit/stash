@@ -136,3 +136,65 @@ func (s *aiSceneAudioStore) scanRows(rows *sqlx.Rows) ([]*models.AISceneAudio, e
 	}
 	return out, nil
 }
+
+// StatsByPerformer aggregates audio analysis stats across a performer's scenes.
+func (s *aiSceneAudioStore) StatsByPerformer(ctx context.Context, performerID int) (*models.AIPerformerAudioStats, error) {
+	rows, err := dbWrapper.Queryx(ctx, `
+		SELECT COUNT(*),
+		       COALESCE(SUM(CASE WHEN a.moans = 1 THEN 1 ELSE 0 END), 0),
+		       COALESCE(AVG(a.silence_ratio), 0),
+		       COALESCE(AVG(vf.duration), 0)
+		FROM ai_scene_audio a
+		JOIN performers_scenes ps ON ps.scene_id = a.scene_id
+		LEFT JOIN scenes_files sf ON sf.scene_id = a.scene_id
+		LEFT JOIN video_files vf ON vf.file_id = sf.file_id
+		WHERE ps.performer_id = ?`, performerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		return nil, rows.Err()
+	}
+
+	var out models.AIPerformerAudioStats
+	if err := rows.Scan(&out.ScenesWithAudio, &out.MoanScenes, &out.AvgSilence, &out.AvgDuration); err != nil {
+		return nil, err
+	}
+	if out.ScenesWithAudio > 0 {
+		out.MoanRate = float64(out.MoanScenes) / float64(out.ScenesWithAudio)
+	}
+	return &out, rows.Err()
+}
+
+// MoanLeaderboard returns performers ordered by number of moaning scenes.
+func (s *aiSceneAudioStore) MoanLeaderboard(ctx context.Context, limit int) ([]*models.AIMoanLeaderboardEntry, error) {
+	rows, err := dbWrapper.Queryx(ctx, `
+		SELECT ps.performer_id,
+		       COUNT(*) AS scenes,
+		       COALESCE(SUM(CASE WHEN a.moans = 1 THEN 1 ELSE 0 END), 0) AS moan_scenes,
+		       COALESCE(AVG(a.silence_ratio), 0) AS avg_silence
+		FROM ai_scene_audio a
+		JOIN performers_scenes ps ON ps.scene_id = a.scene_id
+		GROUP BY ps.performer_id
+		ORDER BY moan_scenes DESC, scenes DESC
+		LIMIT ?`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []*models.AIMoanLeaderboardEntry
+	for rows.Next() {
+		var e models.AIMoanLeaderboardEntry
+		if err := rows.Scan(&e.PerformerID, &e.Scenes, &e.MoanScenes, &e.AvgSilence); err != nil {
+			return nil, err
+		}
+		if e.Scenes > 0 {
+			e.MoanRate = float64(e.MoanScenes) / float64(e.Scenes)
+		}
+		out = append(out, &e)
+	}
+	return out, rows.Err()
+}

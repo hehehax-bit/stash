@@ -138,6 +138,8 @@ export type CriterionType =
   | "favorite"
   | "has_markers"
   | "has_embedding"
+  | "steam_score"
+  | "moods"
   | "is_missing"
   | "tags"
   | "scene_tags"

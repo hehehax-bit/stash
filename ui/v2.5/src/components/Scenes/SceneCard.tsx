@@ -5,6 +5,7 @@ import cx from "classnames";
 import * as GQL from "src/core/generated-graphql";
 import { Icon } from "../Shared/Icon";
 import { EmbeddingBadge } from "../Shared/EmbeddingBadge";
+import { faFire } from "@fortawesome/free-solid-svg-icons";
 import { GalleryLink, TagLink, SceneMarkerLink } from "../Shared/TagLink";
 import { HoverPopover } from "../Shared/HoverPopover";
 import { TruncatedText } from "../Shared/TruncatedText";
@@ -446,6 +447,21 @@ const SceneCardImage = React.memo(
         <SceneSpecsOverlay scene={props.scene} />
         {maybeRenderInteractiveSpeedOverlay()}
         {props.scene.has_embedding && <EmbeddingBadge />}
+        {props.scene.steam_score !== undefined &&
+          props.scene.steam_score > 0 && (
+            <span className="steam-badge" title="Steam score">
+              <Icon icon={faFire} /> {props.scene.steam_score}
+            </span>
+          )}
+        {props.scene.moods && props.scene.moods.length > 0 && (
+          <span className="mood-badges" title={props.scene.moods.join(", ")}>
+            {props.scene.moods.slice(0, 2).map((m) => (
+              <span key={m} className="mood-badge">
+                {m}
+              </span>
+            ))}
+          </span>
+        )}
       </>
     );
   })

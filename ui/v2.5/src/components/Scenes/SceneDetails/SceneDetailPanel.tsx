@@ -1,4 +1,5 @@
 import React from "react";
+import { Badge } from "react-bootstrap";
 import { FormattedMessage, useIntl } from "react-intl";
 import * as GQL from "src/core/generated-graphql";
 import TextUtils from "src/utils/text";
@@ -43,6 +44,22 @@ export const SceneDetailPanel: React.FC<ISceneDetailProps> = (props) => {
           />
         </h6>
         {tags}
+      </>
+    );
+  }
+
+  function renderMoods() {
+    if (!props.scene.moods || props.scene.moods.length === 0) return;
+    return (
+      <>
+        <h6>
+          <FormattedMessage id="moods" />
+        </h6>
+        {props.scene.moods.map((mood) => (
+          <Badge key={mood} variant="warning" className="tag-item">
+            {mood}
+          </Badge>
+        ))}
       </>
     );
   }
@@ -104,6 +121,7 @@ export const SceneDetailPanel: React.FC<ISceneDetailProps> = (props) => {
       <div className="row">
         <div className="col-12">
           {renderDetails()}
+          {renderMoods()}
           {renderTags()}
           {renderPerformers()}
           <CustomFields values={props.scene.custom_fields} fullWidth />

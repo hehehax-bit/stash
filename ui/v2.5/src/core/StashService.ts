@@ -2996,6 +2996,44 @@ export const mutateMetadataAIAudit = (input: GQL.AiAuditInput) =>
     variables: { input },
   });
 
+export const mutateAiMoodGroupCreate = (mood: string) =>
+  client.mutate<GQL.AiMoodGroupCreateMutation>({
+    mutation: GQL.AiMoodGroupCreateDocument,
+    variables: { mood },
+  });
+
+export const mutateMetadataAIMoodTag = (input: GQL.AiMoodInput) =>
+  client.mutate<GQL.MetadataAiMoodTagMutation>({
+    mutation: GQL.MetadataAiMoodTagDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataGenerateGoonReel = (
+  sceneIds: string[],
+  durationPerScene?: number
+) =>
+  client.mutate<GQL.MetadataGenerateGoonReelMutation>({
+    mutation: GQL.MetadataGenerateGoonReelDocument,
+    variables: {
+      scene_ids: sceneIds,
+      duration_per_scene: durationPerScene || undefined,
+    },
+  });
+
+export const mutateMetadataGenerateHighlightClip = (
+  sceneId: string,
+  markerId: string,
+  duration?: number
+) =>
+  client.mutate<GQL.MetadataGenerateHighlightClipMutation>({
+    mutation: GQL.MetadataGenerateHighlightClipDocument,
+    variables: {
+      scene_id: sceneId,
+      marker_id: markerId,
+      duration: duration || undefined,
+    },
+  });
+
 export const mutateMetadataAIPerformerMergeSuggest = (
   input: GQL.AiPerformerMergeSuggestInput
 ) =>

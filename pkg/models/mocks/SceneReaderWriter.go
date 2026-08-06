@@ -1120,6 +1120,29 @@ func (_m *SceneReaderWriter) GetStashIDs(ctx context.Context, relatedID int) ([]
 	return r0, r1
 }
 
+// GetSteamScores provides a mock function with given fields: ctx, sceneIDs
+func (_m *SceneReaderWriter) GetSteamScores(ctx context.Context, sceneIDs []int) (map[int]int, error) {
+	ret := _m.Called(ctx, sceneIDs)
+
+	var r0 map[int]int
+	if rf, ok := ret.Get(0).(func(context.Context, []int) map[int]int); ok {
+		r0 = rf(ctx, sceneIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[int]int)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, []int) error); ok {
+		r1 = rf(ctx, sceneIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetTagIDs provides a mock function with given fields: ctx, relatedID
 func (_m *SceneReaderWriter) GetTagIDs(ctx context.Context, relatedID int) ([]int, error) {
 	ret := _m.Called(ctx, relatedID)
@@ -1266,6 +1289,29 @@ func (_m *SceneReaderWriter) OCountByStudioID(ctx context.Context, studioID int,
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, int, int) error); ok {
 		r1 = rf(ctx, studioID, depth)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// OHistoryLeaderboard provides a mock function with given fields: ctx, limit
+func (_m *SceneReaderWriter) OHistoryLeaderboard(ctx context.Context, limit int) ([]*models.AOHistoryLeaderboardEntry, error) {
+	ret := _m.Called(ctx, limit)
+
+	var r0 []*models.AOHistoryLeaderboardEntry
+	if rf, ok := ret.Get(0).(func(context.Context, int) []*models.AOHistoryLeaderboardEntry); ok {
+		r0 = rf(ctx, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.AOHistoryLeaderboardEntry)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, limit)
 	} else {
 		r1 = ret.Error(1)
 	}

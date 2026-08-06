@@ -74,6 +74,29 @@ func (_m *AISceneAudioReaderWriter) FindBySceneID(ctx context.Context, sceneID i
 	return r0, r1
 }
 
+// MoanLeaderboard provides a mock function with given fields: ctx, limit
+func (_m *AISceneAudioReaderWriter) MoanLeaderboard(ctx context.Context, limit int) ([]*models.AIMoanLeaderboardEntry, error) {
+	ret := _m.Called(ctx, limit)
+
+	var r0 []*models.AIMoanLeaderboardEntry
+	if rf, ok := ret.Get(0).(func(context.Context, int) []*models.AIMoanLeaderboardEntry); ok {
+		r0 = rf(ctx, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.AIMoanLeaderboardEntry)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // SearchByTranscript provides a mock function with given fields: ctx, query, limit
 func (_m *AISceneAudioReaderWriter) SearchByTranscript(ctx context.Context, query string, limit int) ([]*models.AISceneAudio, error) {
 	ret := _m.Called(ctx, query, limit)
@@ -90,6 +113,29 @@ func (_m *AISceneAudioReaderWriter) SearchByTranscript(ctx context.Context, quer
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
 		r1 = rf(ctx, query, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// StatsByPerformer provides a mock function with given fields: ctx, performerID
+func (_m *AISceneAudioReaderWriter) StatsByPerformer(ctx context.Context, performerID int) (*models.AIPerformerAudioStats, error) {
+	ret := _m.Called(ctx, performerID)
+
+	var r0 *models.AIPerformerAudioStats
+	if rf, ok := ret.Get(0).(func(context.Context, int) *models.AIPerformerAudioStats); ok {
+		r0 = rf(ctx, performerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.AIPerformerAudioStats)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, performerID)
 	} else {
 		r1 = ret.Error(1)
 	}

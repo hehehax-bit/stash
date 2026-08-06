@@ -1,0 +1,26 @@
+// quick-hide mode: blur media and hide text so content is not readable
+// on shared screens. Toggled with the H key or the settings checkbox.
+// stylelint-disable selector-class-pattern
+.quick-hide {
+  img,
+  video {
+    filter: blur(18px);
+  }
+
+  .card-title,
+  .card-text,
+  .grid-card .card-section,
+  .scene-card-title,
+  .image-card-title,
+  .performer-card-title {
+    color: transparent;
+    text-shadow: 0 0 8px $text-color;
+  }
+}
+
+.goon-mode {
+  .main,
+  .card {
+    filter: saturate(1.15);
+  }
+}

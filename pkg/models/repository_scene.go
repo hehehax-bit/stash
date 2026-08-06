@@ -35,6 +35,8 @@ type SceneFinder interface {
 type SceneQueryer interface {
 	Query(ctx context.Context, options SceneQueryOptions) (*SceneQueryResult, error)
 	QueryCount(ctx context.Context, sceneFilter *SceneFilterType, findFilter *FindFilterType) (int, error)
+	GetSteamScores(ctx context.Context, sceneIDs []int) (map[int]int, error)
+	OHistoryLeaderboard(ctx context.Context, limit int) ([]*AOHistoryLeaderboardEntry, error)
 }
 
 // SceneCounter provides methods to count scenes.
@@ -149,4 +151,9 @@ type SceneWriter interface {
 type SceneReaderWriter interface {
 	SceneReader
 	SceneWriter
+}
+
+type AOHistoryLeaderboardEntry struct {
+	PerformerID int `json:"performer_id"`
+	OScenes     int `json:"o_scenes"`
 }

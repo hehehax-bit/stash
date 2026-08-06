@@ -47,6 +47,12 @@ export const PrimaryTags: React.FC<IPrimaryTags> = ({
           {p.name}
         </Badge>
       ));
+      const intensity =
+        marker.intensity !== null && marker.intensity !== undefined ? (
+          <Badge variant="warning" className="tag-item">
+            🔥 {Math.round(marker.intensity)}
+          </Badge>
+        ) : null;
 
       return (
         <div key={marker.id}>
@@ -81,6 +87,7 @@ export const PrimaryTags: React.FC<IPrimaryTags> = ({
             )}
           </div>
           <div className="card-section centered">
+            {intensity}
             {performers}
             {tags}
           </div>

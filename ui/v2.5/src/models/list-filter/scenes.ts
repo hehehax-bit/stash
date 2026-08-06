@@ -8,6 +8,8 @@ import {
 } from "./criteria/criterion";
 import { HasMarkersCriterionOption } from "./criteria/has-markers";
 import { HasEmbeddingCriterionOption } from "./criteria/has-embedding";
+import { SteamScoreCriterionOption } from "./criteria/steam-score";
+import { MoodsCriterionOption } from "./criteria/moods";
 import { SceneIsMissingCriterionOption } from "./criteria/is-missing";
 import {
   GroupsCriterionOption,
@@ -73,6 +75,11 @@ const sortByOptions = [
       sfwMessageID: "o_count_random_sfw",
     },
     {
+      messageID: "steam_score",
+      value: "steam_score",
+      sfwMessageID: "steam_score_sfw",
+    },
+    {
       messageID: "last_o_at",
       value: "last_o_at",
       sfwMessageID: "last_o_at_sfw",
@@ -128,6 +135,8 @@ const criterionOptions = [
   createMandatoryTimestampCriterionOption("last_played_at"),
   HasMarkersCriterionOption,
   HasEmbeddingCriterionOption,
+  SteamScoreCriterionOption,
+  MoodsCriterionOption,
   SceneIsMissingCriterionOption,
   TagsCriterionOption,
   createMandatoryNumberCriterionOption("tag_count"),

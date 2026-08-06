@@ -375,3 +375,58 @@ query AiPerformerAppearances($performer_id: ID!, $limit: Int) {
     }
   }
 }
+
+query AiPerformerAudioStats($performer_id: ID!) {
+  aiPerformerAudioStats(performer_id: $performer_id) {
+    scenes_with_audio
+    moan_scenes
+    moan_rate
+    avg_silence
+    avg_duration
+  }
+}
+
+query AiMoanLeaderboard($limit: Int) {
+  aiMoanLeaderboard(limit: $limit) {
+    scenes
+    moan_scenes
+    moan_rate
+    avg_silence
+    performer {
+      ...PerformerData
+    }
+  }
+}
+
+query AiBestMoment($scene_id: ID!) {
+  aiBestMoment(scene_id: $scene_id)
+}
+
+query AiOHistoryLeaderboard($limit: Int) {
+  aiOHistoryLeaderboard(limit: $limit) {
+    o_scenes
+    performer {
+      ...PerformerData
+    }
+  }
+}
+
+query AiMoodGroups {
+  aiMoodGroups {
+    mood
+    scene_count
+  }
+}
+
+query AiSessionBuild($input: AISessionBuildInput!) {
+  aiSessionBuild(input: $input) {
+    total_minutes
+    scenes {
+      scene_id
+      title
+      duration
+      steam
+      best_moment
+    }
+  }
+}

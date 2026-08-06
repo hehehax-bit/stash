@@ -353,6 +353,10 @@ input SceneFilterType {
   play_count: IntCriterionInput
   "Filter by play duration (in seconds)"
   play_duration: IntCriterionInput
+  "Filter by computed steam score (0-10)"
+  steam_score: IntCriterionInput
+  "Filter by AI-detected moods"
+  moods: MultiCriterionInput
   "Filter by scene last played time"
   last_played_at: TimestampCriterionInput
   "Filter by date"

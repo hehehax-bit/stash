@@ -1,0 +1,75 @@
+package sqlite
+
+import (
+	"context"
+
+	"github.com/stashapp/stash/pkg/models"
+)
+
+// GetSteamScores returns a 0-10 steam score per scene id, combining the moan
+// flag, the silence ratio, and explicit (any) tag coverage from the audio
+// analysis and tagging data. Scenes without audio analysis score 0.
+func (s *SceneStore) GetSteamScores(ctx context.Context, sceneIDs []int) (map[int]int, error) {
+	if len(sceneIDs) == 0 {
+		return map[int]int{}, nil
+	}
+
+	inBinding := getInBinding(len(sceneIDs))
+	args := make([]interface{}, len(sceneIDs))
+	for i, id := range sceneIDs {
+		args[i] = id
+	}
+
+	query := `SELECT s.id, MIN(10,
+		CASE WHEN a.moans = 1 THEN 4 ELSE 0 END +
+		CASE WHEN a.silence_ratio < 30 THEN 3 ELSE 0 END +
+		CASE WHEN EXISTS(SELECT 1 FROM scenes_tags st WHERE st.scene_id = s.id) THEN 3 ELSE 0 END
+	) AS steam
+	FROM scenes s
+	LEFT JOIN ai_scene_audio a ON a.scene_id = s.id
+	WHERE s.id IN ` + inBinding
+
+	rows, err := dbWrapper.Queryx(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make(map[int]int, len(sceneIDs))
+	for rows.Next() {
+		var id, steam int
+		if err := rows.Scan(&id, &steam); err != nil {
+			return nil, err
+		}
+		out[id] = steam
+	}
+	return out, rows.Err()
+}
+
+var _ = models.Scene{}
+
+// OHistoryLeaderboard returns performers ordered by the number of distinct
+// scenes the user logged an O for, from the manual O history.
+func (s *SceneStore) OHistoryLeaderboard(ctx context.Context, limit int) ([]*models.AOHistoryLeaderboardEntry, error) {
+	rows, err := dbWrapper.Queryx(ctx, `
+		SELECT ps.performer_id, COUNT(DISTINCT od.scene_id) AS o_scenes
+		FROM scenes_o_dates od
+		JOIN performers_scenes ps ON ps.scene_id = od.scene_id
+		GROUP BY ps.performer_id
+		ORDER BY o_scenes DESC
+		LIMIT ?`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []*models.AOHistoryLeaderboardEntry
+	for rows.Next() {
+		var e models.AOHistoryLeaderboardEntry
+		if err := rows.Scan(&e.PerformerID, &e.OScenes); err != nil {
+			return nil, err
+		}
+		out = append(out, &e)
+	}
+	return out, rows.Err()
+}

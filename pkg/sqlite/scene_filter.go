@@ -166,6 +166,8 @@ func (qb *sceneFilterHandler) criterionHandler() criterionHandler {
 		floatIntCriterionHandler(sceneFilter.ResumeTime, "scenes.resume_time", nil),
 		floatIntCriterionHandler(sceneFilter.PlayDuration, "scenes.play_duration", nil),
 		qb.playCountCriterionHandler(sceneFilter.PlayCount),
+		qb.steamScoreCriterionHandler(sceneFilter.SteamScore),
+		qb.moodsCriterionHandler(sceneFilter.Moods),
 		criterionHandlerFunc(func(ctx context.Context, f *filterBuilder) {
 			if sceneFilter.LastPlayedAt != nil {
 				f.addLeftJoin(
@@ -288,6 +290,36 @@ func (qb *sceneFilterHandler) addFoldersTable(f *filterBuilder, joinType joinTyp
 func (qb *sceneFilterHandler) addVideoFilesTable(f *filterBuilder, joinType joinType) {
 	qb.addSceneFilesTable(f, joinType)
 	f.addJoin(joinType, videoFileTable, "", "video_files.file_id = scenes_files.file_id")
+}
+
+// steamScoreExpression computes the scene steam score (0-10) from the audio
+// analysis and tagging data, matching GetSteamScores.
+const steamScoreExpression = `(MIN(10, COALESCE((SELECT CASE WHEN a.moans = 1 THEN 4 ELSE 0 END + CASE WHEN a.silence_ratio < 30 THEN 3 ELSE 0 END FROM ai_scene_audio a WHERE a.scene_id = scenes.id), 0) + CASE WHEN EXISTS(SELECT 1 FROM scenes_tags st WHERE st.scene_id = scenes.id) THEN 3 ELSE 0 END))`
+
+func (qb *sceneFilterHandler) steamScoreCriterionHandler(steamScore *models.IntCriterionInput) criterionHandlerFunc {
+	return intCriterionHandler(steamScore, steamScoreExpression, nil)
+}
+
+func (qb *sceneFilterHandler) moodsCriterionHandler(moods *models.MultiCriterionInput) criterionHandlerFunc {
+	h := joinedMultiCriterionHandlerBuilder{
+		primaryTable: sceneTable,
+		joinTable:    "ai_scene_moods",
+		joinAs:       "scene_moods_join",
+		primaryFK:    sceneIDColumn,
+		foreignFK:    "mood",
+
+		addJoinTable: func(f *filterBuilder, joinType joinType) {
+			f.addJoin(joinType, "ai_scene_moods", "scene_moods_join", "scene_moods_join.scene_id = scenes.id")
+		},
+	}
+
+	handler := h.handler(moods)
+	return func(ctx context.Context, f *filterBuilder) {
+		if moods == nil {
+			return
+		}
+		handler(ctx, f)
+	}
 }
 
 func (qb *sceneFilterHandler) playCountCriterionHandler(count *models.IntCriterionInput) criterionHandlerFunc {

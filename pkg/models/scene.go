@@ -115,6 +115,10 @@ type SceneFilterType struct {
 	ResumeTime *IntCriterionInput `json:"resume_time"`
 	// Filter by play count
 	PlayCount *IntCriterionInput `json:"play_count"`
+	// Filter by computed steam score (0-10)
+	SteamScore *IntCriterionInput `json:"steam_score"`
+	// Filter by AI-detected moods
+	Moods *MultiCriterionInput `json:"moods"`
 	// Filter by play duration (in seconds)
 	PlayDuration *IntCriterionInput `json:"play_duration"`
 	// Filter by last played at

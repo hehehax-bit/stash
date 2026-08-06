@@ -490,3 +490,63 @@ type AIPerformerAppearance {
   screenshot: String!
   scene: Scene!
 }
+
+"Aggregated audio analysis stats for a performer's scenes."
+type AIPerformerAudioStats {
+  scenes_with_audio: Int!
+  "Scenes where moans were detected."
+  moan_scenes: Int!
+  "Share of the performer's analysed scenes with moans (0-1)."
+  moan_rate: Float!
+  "Average silence ratio (0-100) across the performer's scenes."
+  avg_silence: Float!
+  "Average scene duration in seconds."
+  avg_duration: Float!
+}
+
+type AIMoanLeaderboardEntry {
+  performer: Performer!
+  scenes: Int!
+  moan_scenes: Int!
+  moan_rate: Float!
+  avg_silence: Float!
+}
+
+type AIOHistoryLeaderboardEntry {
+  performer: Performer!
+  o_scenes: Int!
+}
+
+type AIMoodGroup {
+  mood: String!
+  scene_count: Int!
+}
+
+input AISessionBuildInput {
+  "Target session length in minutes."
+  duration_minutes: Int!
+  "Only include scenes with these performers."
+  performer_ids: [ID!]
+  "Only include scenes with any of these moods."
+  moods: [String!]
+  "Minimum steam score (0-10). Default 6."
+  min_steam: Int
+  "Optional vibe description that boosts embedding matches."
+  vibe: String
+  "Maximum number of scenes. Default 20."
+  limit: Int
+}
+
+type AISessionScene {
+  scene_id: ID!
+  title: String!
+  duration: Float!
+  steam: Int!
+  "Seconds of the highest-intensity marker, 0 when the scene has none."
+  best_moment: Float!
+}
+
+type AISessionPlan {
+  scenes: [AISessionScene!]!
+  total_minutes: Float!
+}

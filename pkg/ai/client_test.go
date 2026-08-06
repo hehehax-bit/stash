@@ -395,3 +395,16 @@ func TestClientTranscribeSegments(t *testing.T) {
 	assert.InDelta(t, 0.0, result.Segments[0].Start, 0.0001)
 	assert.InDelta(t, 2.0, result.Segments[1].End, 0.0001)
 }
+
+func newEmbeddingServer(t *testing.T, vec []float32) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		resp := map[string]any{
+			"object": "list",
+			"data":   []map[string]any{{"object": "embedding", "embedding": vec, "index": 0}},
+			"model":  "embed",
+		}
+		require.NoError(t, json.NewEncoder(w).Encode(resp))
+	}))
+}

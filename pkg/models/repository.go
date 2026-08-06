@@ -39,6 +39,7 @@ type Repository struct {
 	AIAudit               AIAuditReaderWriter
 	AITranslation         AITranslationReaderWriter
 	AIPerformerCandidate  AIPerformerCandidateReaderWriter
+	AIMood                AIMoodReaderWriter
 }
 
 func (r *Repository) WithTxn(ctx context.Context, fn txn.TxnFunc) error {

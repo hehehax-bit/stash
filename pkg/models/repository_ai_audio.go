@@ -19,10 +19,28 @@ type AISceneAudio struct {
 	UpdatedAt          int64  `json:"updated_at"`
 }
 
+type AIPerformerAudioStats struct {
+	ScenesWithAudio int     `json:"scenes_with_audio"`
+	MoanScenes      int     `json:"moan_scenes"`
+	MoanRate        float64 `json:"moan_rate"`
+	AvgSilence      float64 `json:"avg_silence"`
+	AvgDuration     float64 `json:"avg_duration"`
+}
+
+type AIMoanLeaderboardEntry struct {
+	PerformerID int     `json:"performer_id"`
+	Scenes      int     `json:"scenes"`
+	MoanScenes  int     `json:"moan_scenes"`
+	MoanRate    float64 `json:"moan_rate"`
+	AvgSilence  float64 `json:"avg_silence"`
+}
+
 type AISceneAudioReader interface {
 	FindBySceneID(ctx context.Context, sceneID int) (*AISceneAudio, error)
 	FindAssessedScenes(ctx context.Context) ([]int, error)
 	SearchByTranscript(ctx context.Context, query string, limit int) ([]*AISceneAudio, error)
+	StatsByPerformer(ctx context.Context, performerID int) (*AIPerformerAudioStats, error)
+	MoanLeaderboard(ctx context.Context, limit int) ([]*AIMoanLeaderboardEntry, error)
 }
 
 type AISceneAudioWriter interface {

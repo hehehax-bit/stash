@@ -87,3 +87,49 @@ func TestMergeTags_UnconfirmedReturnsSummary(t *testing.T) {
 	assert.Contains(t, result, "This merge would move")
 	assert.Contains(t, result, "Call again with `\"confirmed\": true` to execute.")
 }
+
+func TestRecommendScene(t *testing.T) {
+	db := mocks.NewDatabase()
+
+	// embedding server
+	embedServer := newEmbeddingServer(t, []float32{0.5, 0.5})
+	defer embedServer.Close()
+
+	cfg := ToolConfig{
+		LLMBaseURL:     embedServer.URL,
+		LLMModel:       "llm",
+		EmbeddingModel: "embed",
+	}
+
+	db.Embedding.On("SearchSimilar", mock.Anything, "scene", "embed", mock.Anything, 9).
+		Return([]models.SimilarityResult{
+			{EntityID: 1, Score: 0.9},
+			{EntityID: 2, Score: 0.8},
+		}, nil)
+	db.Scene.On("Find", mock.Anything, 1).Return(&models.Scene{ID: 1, Title: "Bondage night"}, nil)
+	db.Scene.On("Find", mock.Anything, 2).Return(&models.Scene{ID: 2, Title: "Slow evening"}, nil)
+	db.AISceneAudio.On("FindBySceneID", mock.Anything, 1).Return(&models.AISceneAudio{SceneID: 1, Moans: true}, nil)
+	db.AISceneAudio.On("FindBySceneID", mock.Anything, 2).Return(&models.AISceneAudio{SceneID: 2, Moans: false}, nil)
+	db.Scene.On("LoadPrimaryFile", mock.Anything, mock.Anything).Return(nil)
+
+	result, err := recommendScene(context.Background(), db.Repository(), []byte(`{"vibe": "bondage and rough"}`), cfg)
+
+	require.NoError(t, err)
+	// the moaning scene is boosted and listed first
+	posBondage := indexOfStr(result, "Bondage night")
+	posSlow := indexOfStr(result, "Slow evening")
+	require.GreaterOrEqual(t, posBondage, 0)
+	assert.True(t, posBondage < posSlow, "moaning scene should be ranked first")
+	assert.Contains(t, result, "/scenes/1")
+	db.Embedding.AssertExpectations(t)
+	db.AISceneAudio.AssertExpectations(t)
+}
+
+func indexOfStr(s, substr string) int {
+	for i := 0; i+len(substr) <= len(s); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
+}

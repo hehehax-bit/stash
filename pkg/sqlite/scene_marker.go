@@ -38,6 +38,7 @@ type sceneMarkerRow struct {
 	CreatedAt    Timestamp  `db:"created_at"`
 	UpdatedAt    Timestamp  `db:"updated_at"`
 	EndSeconds   null.Float `db:"end_seconds"`
+	Intensity    null.Float `db:"intensity"`
 }
 
 func (r *sceneMarkerRow) fromSceneMarker(o models.SceneMarker) {
@@ -46,6 +47,9 @@ func (r *sceneMarkerRow) fromSceneMarker(o models.SceneMarker) {
 	r.Seconds = o.Seconds
 	if o.EndSeconds != nil {
 		r.EndSeconds = null.FloatFrom(*o.EndSeconds)
+	}
+	if o.Intensity != nil {
+		r.Intensity = null.FloatFrom(*o.Intensity)
 	}
 	r.PrimaryTagID = o.PrimaryTagID
 	r.SceneID = o.SceneID

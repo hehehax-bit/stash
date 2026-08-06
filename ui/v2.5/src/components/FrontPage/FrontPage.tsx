@@ -6,6 +6,9 @@ import { Button } from "react-bootstrap";
 import { FrontPageConfig } from "./FrontPageConfig";
 import { useToast } from "src/hooks/Toast";
 import { Control } from "./Control";
+import { DailyGoonWidget } from "./DailyGoonWidget";
+import { FeaturesButton } from "./FeaturesModal";
+import { ForYouHub } from "./ForYouHub";
 import { useConfigurationContext } from "src/hooks/Config";
 import {
   FrontPageContent,
@@ -70,13 +73,16 @@ const FrontPage: React.FC = PatchComponent("FrontPage", () => {
 
   return (
     <div className="recommendations-container">
+      <DailyGoonWidget />
+      <ForYouHub />
       <div>
         {frontPageContent?.map((content, i) => (
           <Control key={i} content={content} />
         ))}
       </div>
       <div className="recommendations-footer">
-        <Button onClick={() => setIsEditing(true)}>
+        <FeaturesButton />
+        <Button className="ml-2" onClick={() => setIsEditing(true)}>
           <FormattedMessage id={"actions.customise"} />
         </Button>
       </div>

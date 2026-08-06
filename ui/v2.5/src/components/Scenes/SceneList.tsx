@@ -23,6 +23,8 @@ import { AIAudioAnalysisDialog } from "../Dialogs/AIAudioAnalysisDialog/AIAudioA
 import { mutateMetadataDetectLooping } from "src/core/StashService";
 import { useToast } from "src/hooks/Toast";
 import { useConfigurationContext } from "src/hooks/Config";
+import { useGoonModeFilterHook } from "src/hooks/GoonMode";
+import { SidebarSteamFilter, SidebarMoodsFilter } from "./SteamMoodFilters";
 import { SceneMergeModal } from "./SceneMergeDialog";
 import { objectTitle } from "src/core/files";
 import TextUtils from "src/utils/text";
@@ -333,6 +335,8 @@ const SidebarContent: React.FC<{
           setFilter={setFilter}
           sectionID="hasEmbedding"
         />
+        <SidebarSteamFilter filter={filter} setFilter={setFilter} />
+        <SidebarMoodsFilter filter={filter} setFilter={setFilter} />
         <SidebarBooleanFilter
           title={<FormattedMessage id="organized" />}
           data-type={OrganizedCriterionOption.type}
@@ -383,6 +387,14 @@ export const FilteredSceneList = PatchComponent(
     const searchFocus = useFocus();
 
     const { filterHook, defaultSort, view, alterQuery, fromGroupId } = props;
+    const goonHook = useGoonModeFilterHook();
+    const combinedFilterHook = useCallback(
+      (filter: ListFilterModel) => {
+        const goonFiltered = goonHook(filter);
+        return filterHook ? filterHook(goonFiltered) : goonFiltered;
+      },
+      [filterHook, goonHook]
+    );
 
     // States
     const {
@@ -405,7 +417,7 @@ export const FilteredSceneList = PatchComponent(
           useResult: useFindScenes,
           getCount: (r) => r.data?.findScenes.count ?? 0,
           getItems: (r) => r.data?.findScenes.scenes ?? [],
-          filterHook,
+          filterHook: combinedFilterHook,
         },
       });
 

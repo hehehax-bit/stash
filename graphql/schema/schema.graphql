@@ -267,6 +267,18 @@ type Query {
   aiPerformerMergeSuggestions(status: String): [AIPerformerMergeSuggestion!]!
   "Timeline appearances of a performer: scene markers attributed to them during AI segmentation."
   aiPerformerAppearances(performer_id: ID!, limit: Int): [AIPerformerAppearance!]!
+  "Aggregated audio analysis stats for a performer's scenes."
+  aiPerformerAudioStats(performer_id: ID!): AIPerformerAudioStats!
+  "Performers with the most moaning scenes, ordered by moan count."
+  aiMoanLeaderboard(limit: Int): [AIMoanLeaderboardEntry!]!
+  "Seconds into the scene of the highest-intensity marker, or null if the scene has no intensity-rated markers."
+  aiBestMoment(scene_id: ID!): Float
+  "Builds a goon session: a curated, duration-bounded queue of steamy scenes."
+  aiSessionBuild(input: AISessionBuildInput!): AISessionPlan!
+  "Performers ranked by the number of scenes you logged an O for."
+  aiOHistoryLeaderboard(limit: Int): [AIOHistoryLeaderboardEntry!]!
+  "Number of scenes per AI-detected mood."
+  aiMoodGroups: [AIMoodGroup!]!
   "AI audit findings, filtered by status (pending/accepted/rejected)."
   aiAudits(status: String): [AIAudit!]!
   "AI translations, filtered by status (pending/accepted/rejected)."
@@ -556,6 +568,14 @@ type Mutation {
   aiPerformerCandidateApply(candidate_id: ID!, target_performer_id: ID): Boolean!
   "Rejects a performer candidate"
   aiPerformerCandidateReject(candidate_id: ID!): Boolean!
+  "Generates a highlight clip around a scene marker. Returns the clip file path"
+  metadataGenerateHighlightClip(scene_id: ID!, marker_id: ID!, duration: Int): String!
+  "Classifies scenes into moods using AI vision. Returns the job ID"
+  metadataAIMoodTag(input: AIMoodInput!): ID!
+  "Creates a group containing all scenes with the given mood. Returns the group ID"
+  aiMoodGroupCreate(mood: String!): ID!
+  "Generates a goon reel: a single video of best-moment clips from the given scenes. Returns the file path"
+  metadataGenerateGoonReel(scene_ids: [ID!]!, duration_per_scene: Int): String!
   "Applies all pending AI audit findings. Returns the number applied"
   aiAuditApplyAll: Int!
   "Rejects all pending AI audit findings. Returns the number rejected"

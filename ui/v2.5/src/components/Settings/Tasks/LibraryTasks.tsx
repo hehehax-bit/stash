@@ -30,11 +30,14 @@ import { AIPerformerMergeSuggestDialog } from "../../Dialogs/AIPerformerMergeSug
 import { AIAuditReviewDialog } from "../../Dialogs/AIAuditReviewDialog/AIAuditReviewDialog";
 import { AITranslationReviewDialog } from "../../Dialogs/AITranslationReviewDialog/AITranslationReviewDialog";
 import { AIPerformerDiscoveryReviewDialog } from "../../Dialogs/AIPerformerDiscoveryReviewDialog/AIPerformerDiscoveryReviewDialog";
+import { AIMoodGroupsDialog } from "../../Dialogs/AIMoodGroupsDialog/AIMoodGroupsDialog";
+import { AISessionBuildDialog } from "../../Dialogs/AISessionBuildDialog/AISessionBuildDialog";
 import {
   mutateMetadataAIPerformerMergeSuggest,
   mutateMetadataAIAudit,
   mutateMetadataAITranslate,
   mutateMetadataAIPerformerDiscovery,
+  mutateMetadataAIMoodTag,
 } from "src/core/StashService";
 import * as GQL from "src/core/generated-graphql";
 import { DirectorySelectionDialog } from "./DirectorySelectionDialog";
@@ -132,6 +135,8 @@ export const LibraryTasks: React.FC = () => {
     aiAuditReview: false,
     aiTranslationReview: false,
     aiPerformerDiscoveryReview: false,
+    aiMoodGroups: false,
+    aiSessionBuild: false,
   });
 
   function getDefaultScanOptions(): GQL.ScanMetadataInput {
@@ -537,6 +542,26 @@ export const LibraryTasks: React.FC = () => {
     );
   }
 
+  function maybeRenderAIMoodGroupsDialog() {
+    if (!dialogOpen.aiMoodGroups) return;
+
+    return (
+      <AIMoodGroupsDialog
+        onClose={() => setDialogOpen({ aiMoodGroups: false })}
+      />
+    );
+  }
+
+  function maybeRenderAISessionBuildDialog() {
+    if (!dialogOpen.aiSessionBuild) return;
+
+    return (
+      <AISessionBuildDialog
+        onClose={() => setDialogOpen({ aiSessionBuild: false })}
+      />
+    );
+  }
+
   function renderGenerateDialog() {
     if (!dialogOpen.generate) {
       return;
@@ -617,6 +642,8 @@ export const LibraryTasks: React.FC = () => {
       {maybeRenderAIAuditReviewDialog()}
       {maybeRenderAITranslationReviewDialog()}
       {maybeRenderAIPerformerDiscoveryReviewDialog()}
+      {maybeRenderAIMoodGroupsDialog()}
+      {maybeRenderAISessionBuildDialog()}
       {renderGenerateDialog()}
 
       <SettingSection headingID="library">
@@ -1083,6 +1110,58 @@ export const LibraryTasks: React.FC = () => {
             <FormattedMessage
               id="config.tasks.ai_performer_discovery.review"
               defaultMessage="Review Candidates…"
+            />
+          </Button>
+        </Setting>
+      </SettingSection>
+
+      <SettingSection advanced>
+        <Setting
+          heading={<FormattedMessage id="config.tasks.ai_mood_tag.heading" />}
+          subHeadingID="config.tasks.ai_mood_tag.description"
+        >
+          <Button
+            variant="secondary"
+            type="button"
+            onClick={async () => {
+              try {
+                await mutateMetadataAIMoodTag({});
+                Toast.success(
+                  intl.formatMessage(
+                    { id: "config.tasks.added_job_to_queue" },
+                    { operation_name: "AI Mood Tagging" }
+                  )
+                );
+              } catch (e) {
+                Toast.error(e);
+              }
+            }}
+          >
+            <FormattedMessage
+              id="config.tasks.ai_mood_tag.run"
+              defaultMessage="Tag Moods…"
+            />
+          </Button>
+          <Button
+            variant="secondary"
+            type="button"
+            className="ml-2"
+            onClick={() => setDialogOpen({ aiMoodGroups: true })}
+          >
+            <FormattedMessage
+              id="config.tasks.ai_mood_groups.button"
+              defaultMessage="Mood Groups…"
+            />
+          </Button>
+          <Button
+            variant="secondary"
+            type="button"
+            className="ml-2"
+            onClick={() => setDialogOpen({ aiSessionBuild: true })}
+          >
+            <FormattedMessage
+              id="config.tasks.ai_session.button"
+              defaultMessage="Build a Session…"
             />
           </Button>
         </Setting>

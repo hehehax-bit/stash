@@ -166,3 +166,33 @@ mutation AiPerformerCandidateApplyAll {
 mutation AiPerformerCandidateRejectAll {
   aiPerformerCandidateRejectAll
 }
+
+mutation MetadataGenerateHighlightClip(
+  $scene_id: ID!
+  $marker_id: ID!
+  $duration: Int
+) {
+  metadataGenerateHighlightClip(
+    scene_id: $scene_id
+    marker_id: $marker_id
+    duration: $duration
+  )
+}
+
+mutation MetadataAIMoodTag($input: AIMoodInput!) {
+  metadataAIMoodTag(input: $input)
+}
+
+mutation AiMoodGroupCreate($mood: String!) {
+  aiMoodGroupCreate(mood: $mood)
+}
+
+mutation MetadataGenerateGoonReel(
+  $scene_ids: [ID!]!
+  $duration_per_scene: Int
+) {
+  metadataGenerateGoonReel(
+    scene_ids: $scene_ids
+    duration_per_scene: $duration_per_scene
+  )
+}

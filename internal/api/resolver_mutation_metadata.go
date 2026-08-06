@@ -188,6 +188,67 @@ func (r *mutationResolver) AiPerformerCandidateRejectAll(ctx context.Context) (i
 	return manager.GetInstance().AIPerformerCandidateRejectAll(ctx)
 }
 
+func (r *mutationResolver) AiMoodGroupCreate(ctx context.Context, mood string) (string, error) {
+	groupID, err := manager.GetInstance().AIMoodGroupCreate(ctx, mood)
+	if err != nil {
+		return "", err
+	}
+	return strconv.Itoa(groupID), nil
+}
+
+func (r *mutationResolver) MetadataAIMoodTag(ctx context.Context, input AIMoodInput) (string, error) {
+	overwrite := false
+	if input.Overwrite != nil {
+		overwrite = *input.Overwrite
+	}
+
+	jobID, err := manager.GetInstance().AIMoodTag(ctx, manager.AIMoodInput{
+		MaxScenes: input.MaxScenes,
+		Timeout:   input.Timeout,
+		Overwrite: overwrite,
+	})
+	if err != nil {
+		return "", err
+	}
+	return strconv.Itoa(jobID), nil
+}
+
+func (r *mutationResolver) MetadataGenerateGoonReel(ctx context.Context, sceneIDs []string, durationPerScene *int) (string, error) {
+	ids := make([]int, len(sceneIDs))
+	for i, id := range sceneIDs {
+		n, err := strconv.Atoi(id)
+		if err != nil {
+			return "", fmt.Errorf("converting scene id: %w", err)
+		}
+		ids[i] = n
+	}
+
+	d := 0
+	if durationPerScene != nil {
+		d = *durationPerScene
+	}
+
+	return manager.GetInstance().GenerateGoonReel(ctx, ids, d)
+}
+
+func (r *mutationResolver) MetadataGenerateHighlightClip(ctx context.Context, sceneID string, markerID string, duration *int) (string, error) {
+	sid, err := strconv.Atoi(sceneID)
+	if err != nil {
+		return "", fmt.Errorf("converting scene id: %w", err)
+	}
+	mid, err := strconv.Atoi(markerID)
+	if err != nil {
+		return "", fmt.Errorf("converting marker id: %w", err)
+	}
+
+	d := 0
+	if duration != nil {
+		d = *duration
+	}
+
+	return manager.GetInstance().GenerateHighlightClip(ctx, sid, mid, d)
+}
+
 func (r *mutationResolver) AiPerformerSuggestionApply(ctx context.Context, suggestionID string) (bool, error) {
 	id, err := strconv.ParseInt(suggestionID, 10, 64)
 	if err != nil {

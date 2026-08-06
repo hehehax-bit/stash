@@ -47,6 +47,7 @@ type aiSceneSegment struct {
 	Description string   `json:"description"`
 	Tags        []string `json:"tags"`
 	Performers  []string `json:"performers"`
+	Intensity   float64  `json:"intensity"`
 }
 
 type aiSceneSegmentation struct {
@@ -285,6 +286,7 @@ For each segment provide:
 - "description": a 1-2 sentence explicit description of the segment.
 - "tags": 2-5 descriptive tags for the segment (acts, positions, body parts, setting).
 - "performers": an array of the names of performers visible in this segment. Use specific names when you are highly confident; otherwise omit the person. Empty array if none identifiable.
+- "intensity": a number from 1 to 10 rating how intense/steamy the segment is, 10 being the most intense.
 
 Rules:
 - Cover the whole scene; segments should be ordered by start time and should not overlap.
@@ -386,6 +388,7 @@ func (j *AISceneSegmentJob) applySegments(ctx context.Context, r models.Reposito
 			marker.Title = title
 			marker.Seconds = start
 			marker.EndSeconds = endSeconds
+			marker.Intensity = &seg.Intensity
 			marker.PrimaryTagID = aiTagID
 			marker.SceneID = s.ID
 

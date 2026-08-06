@@ -91,6 +91,12 @@ export interface IUIConfig {
 
   showAbLoopControls?: boolean;
 
+  // if true, pressing H blurs thumbnails and hides titles
+  quickHide?: boolean;
+
+  // if true, goon mode is on by default (press G to toggle)
+  goonMode?: boolean;
+
   // maximum number of items to shown in the dropdown list - defaults to 200
   // upper limit of 1000
   maxOptionsShown?: number;

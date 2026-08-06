@@ -51,6 +51,10 @@ type Scene {
   o_counter: Int
   "Whether an AI embedding exists for this scene"
   has_embedding: Boolean!
+  "Steam score 0-10 combining moan detection, silence ratio, and explicit tag coverage."
+  steam_score: Int!
+  "AI-detected moods for this scene."
+  moods: [String!]!
   interactive: Boolean!
   interactive_speed: Int
   captions: [VideoCaption!]

@@ -275,6 +275,88 @@ func (s *Manager) AIPerformerCluster(ctx context.Context, input AIPerformerClust
 	return s.JobManager.AddWithType(ctx, "AI Clustering Performers...", "ai", j), nil
 }
 
+// GenerateHighlightClip enqueues a job that cuts a clip around a scene marker
+// and returns the output clip path.
+// AIMoodGroupCreate creates a group named after a mood and attaches all
+// scenes carrying that mood, reusing the smart collections group pattern.
+func (s *Manager) AIMoodGroupCreate(ctx context.Context, mood string) (int, error) {
+	r := instance.Repository
+
+	var sceneIDs []int
+	if err := r.WithReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		sceneIDs, err = r.AIMood.FindMoods(ctx, mood, 100000)
+		return err
+	}); err != nil {
+		return 0, err
+	}
+	if len(sceneIDs) == 0 {
+		return 0, fmt.Errorf("no scenes carry the mood %q", mood)
+	}
+
+	name := mood
+	if name != "" {
+		name = strings.ToUpper(name[:1]) + name[1:]
+	}
+	name += " scenes"
+
+	var groupID int
+	if err := r.WithTxn(ctx, func(ctx context.Context) error {
+		newGroup := models.NewGroup()
+		newGroup.Name = name
+		if err := r.Group.Create(ctx, &newGroup); err != nil {
+			return fmt.Errorf("creating group: %w", err)
+		}
+		groupID = newGroup.ID
+
+		groupUpdate := &models.UpdateGroupIDs{
+			Groups: []models.GroupsScenes{{GroupID: groupID}},
+			Mode:   models.RelationshipUpdateModeAdd,
+		}
+		for _, sceneID := range sceneIDs {
+			partial := models.ScenePartial{GroupIDs: groupUpdate}
+			if _, err := r.Scene.UpdatePartial(ctx, sceneID, partial); err != nil {
+				return fmt.Errorf("adding scene %d to group: %w", sceneID, err)
+			}
+		}
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+
+	logger.Infof("Created mood group %q with %d scenes", name, len(sceneIDs))
+	return groupID, nil
+}
+
+func (s *Manager) AIMoodTag(ctx context.Context, input AIMoodInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAIMoodJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Tagging Moods...", "ai", j), nil
+}
+
+// GenerateGoonReel enqueues a job that concatenates best-moment clips of the
+// given scenes into a single video and returns the output path.
+func (s *Manager) GenerateGoonReel(ctx context.Context, sceneIDs []int, durationPerScene int) (string, error) {
+	clipsDir := filepath.Join(instance.Config.GetConfigPath(), "clips")
+	outputPath := filepath.Join(clipsDir, fmt.Sprintf("goon_reel_%d.mp4", time.Now().Unix()))
+
+	s.JobManager.AddWithType(ctx, "Generating Goon Reel...", "ai", CreateGenerateGoonReelJob(sceneIDs, durationPerScene))
+
+	return outputPath, nil
+}
+
+func (s *Manager) GenerateHighlightClip(ctx context.Context, sceneID, markerID, duration int) (string, error) {
+	clipsDir := filepath.Join(instance.Config.GetConfigPath(), "clips")
+	outputPath := filepath.Join(clipsDir, fmt.Sprintf("scene_%d_marker_%d.mp4", sceneID, markerID))
+
+	s.JobManager.Add(ctx, "Generating Highlight Clip...", CreateGenerateHighlightClipJob(sceneID, markerID, duration))
+
+	return outputPath, nil
+}
+
 func (s *Manager) AIPerformerMergeSuggest(ctx context.Context, input AIPerformerMergeSuggestInput) (int, error) {
 	if !instance.Config.GetAIEnabled() {
 		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")

@@ -34,7 +34,7 @@ const (
 	cacheSizeEnv = "STASH_SQLITE_CACHE_SIZE"
 )
 
-var appSchemaVersion uint = 100
+var appSchemaVersion uint = 102
 
 //go:embed migrations/*.sql
 var migrationsBox embed.FS
@@ -91,6 +91,7 @@ type storeRepository struct {
 	AIAudit               *aiAuditStore
 	AITranslation         *aiTranslationStore
 	AIPerformerCandidate  *aiPerformerCandidateStore
+	AIMood                *aiMoodStore
 }
 
 type Database struct {
@@ -141,6 +142,7 @@ func NewDatabase() *Database {
 		AIAudit:               NewAIAuditStore(),
 		AITranslation:         NewAITranslationStore(),
 		AIPerformerCandidate:  NewAIPerformerCandidateStore(),
+		AIMood:                NewAIMoodStore(),
 	}
 
 	ret := &Database{

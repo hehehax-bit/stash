@@ -143,5 +143,6 @@ func (db *Database) Repository() models.Repository {
 		AIAudit:               db.AIAudit,
 		AITranslation:         db.AITranslation,
 		AIPerformerCandidate:  db.AIPerformerCandidate,
+		AIMood:                db.AIMood,
 	}
 }

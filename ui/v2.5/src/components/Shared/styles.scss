@@ -1281,3 +1281,38 @@ input[type="range"].double-range-slider-max {
   top: 0.5rem;
   z-index: 1;
 }
+
+.steam-badge {
+  background-color: rgba(255, 87, 34, 0.85);
+  border-radius: 0.25rem;
+  color: $white;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+  pointer-events: none;
+  position: absolute;
+  right: 0.5rem;
+  top: 2.2rem;
+  z-index: 1;
+}
+
+.mood-badges {
+  bottom: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  left: 0.5rem;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+
+.mood-badge {
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 0.25rem;
+  color: $white;
+  font-size: 0.65rem;
+  line-height: 1;
+  padding: 0.15rem 0.3rem;
+  width: fit-content;
+}

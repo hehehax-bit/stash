@@ -21,6 +21,35 @@ func convertVideoFile(f models.File) (*models.VideoFile, error) {
 	return vf, nil
 }
 
+func (r *sceneResolver) Moods(ctx context.Context, obj *models.Scene) ([]string, error) {
+	var moods []string
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		found, err := r.repository.AIMood.FindBySceneID(ctx, obj.ID)
+		if err != nil {
+			return err
+		}
+		for _, m := range found {
+			moods = append(moods, m.Mood)
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return moods, nil
+}
+
+func (r *sceneResolver) SteamScore(ctx context.Context, obj *models.Scene) (int, error) {
+	var scores map[int]int
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		scores, err = r.repository.Scene.GetSteamScores(ctx, []int{obj.ID})
+		return err
+	}); err != nil {
+		return 0, err
+	}
+	return scores[obj.ID], nil
+}
+
 func (r *sceneResolver) HasEmbedding(ctx context.Context, obj *models.Scene) (bool, error) {
 	var has bool
 	if err := r.withReadTxn(ctx, func(ctx context.Context) error {

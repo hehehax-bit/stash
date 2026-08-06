@@ -1189,6 +1189,7 @@ var sceneSortOptions = sortOptions{
 	"random",
 	"rating",
 	"resolution",
+	"steam_score",
 	"studio",
 	"tag_count",
 	"title",
@@ -1313,6 +1314,8 @@ func (qb *SceneStore) setSceneSort(query *queryBuilder, findFilter *models.FindF
 		query.sortAndPagination += getCountSort(sceneTable, scenesODatesTable, sceneIDColumn, direction)
 	case "o_counter_random":
 		query.sortAndPagination += getImportanceSort(fmt.Sprintf("(SELECT COUNT(*) FROM %s AS sort WHERE sort.%s = %s.id)", scenesODatesTable, sceneIDColumn, sceneTable), direction)
+	case "steam_score":
+		query.sortAndPagination += " ORDER BY " + steamScoreExpression + " " + getSortDirection(direction)
 	case "performer_age":
 		// Looking at the youngest performer by default
 		aggregation := "MIN"

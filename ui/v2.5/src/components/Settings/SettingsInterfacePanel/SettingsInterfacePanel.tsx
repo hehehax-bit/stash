@@ -411,6 +411,20 @@ export const SettingsInterfacePanel: React.FC = PatchComponent(
             onChange={(v) => saveUI({ alwaysStartFromBeginning: v })}
           />
           <BooleanSetting
+            id="quick-hide"
+            headingID="config.ui.quick_hide"
+            subHeadingID="config.ui.quick_hide_description"
+            checked={ui.quickHide ?? false}
+            onChange={(v) => saveUI({ quickHide: v })}
+          />
+          <BooleanSetting
+            id="goon-mode"
+            headingID="config.ui.goon_mode"
+            subHeadingID="config.ui.goon_mode_description"
+            checked={ui.goonMode ?? false}
+            onChange={(v) => saveUI({ goonMode: v })}
+          />
+          <BooleanSetting
             id="track-activity"
             headingID="config.ui.scene_player.options.track_activity"
             checked={ui.trackActivity ?? true}

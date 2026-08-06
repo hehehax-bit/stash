@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -1132,6 +1133,89 @@ func searchSimilarScenes(ctx context.Context, repo models.Repository, args json.
 	return b.String(), nil
 }
 
+func recommendScene(ctx context.Context, repo models.Repository, args json.RawMessage, cfg ToolConfig) (string, error) {
+	var params struct {
+		Vibe  string `json:"vibe"`
+		Limit int    `json:"limit"`
+	}
+	if err := json.Unmarshal(args, &params); err != nil {
+		return "", fmt.Errorf("invalid args: %w", err)
+	}
+	params.Vibe = strings.TrimSpace(params.Vibe)
+	if params.Vibe == "" {
+		return "", fmt.Errorf("vibe is required — describe what you are in the mood for")
+	}
+	if params.Limit <= 0 || params.Limit > 5 {
+		params.Limit = 3
+	}
+
+	model := cfg.EmbeddingModel
+	if model == "" {
+		model = cfg.LLMModel
+	}
+	if cfg.LLMBaseURL == "" || model == "" {
+		return "AI is not configured. Configure the AI base URL and embedding model first.", nil
+	}
+
+	client := NewClient(cfg.LLMBaseURL, model)
+	vec, err := client.Embedding(ctx, params.Vibe)
+	if err != nil {
+		return "", fmt.Errorf("embedding the vibe: %w", err)
+	}
+
+	results, err := repo.Embedding.SearchSimilar(ctx, "scene", model, vec, params.Limit*3)
+	if err != nil {
+		return "", fmt.Errorf("searching scenes: %w", err)
+	}
+	if len(results) == 0 {
+		return "No matching scenes found. Run the embedding job first.", nil
+	}
+
+	type candidate struct {
+		scene *models.Scene
+		score float64
+		moans bool
+	}
+	var candidates []candidate
+	for _, r := range results {
+		s, _ := repo.Scene.Find(ctx, r.EntityID)
+		if s == nil {
+			continue
+		}
+		audio, _ := repo.AISceneAudio.FindBySceneID(ctx, s.ID)
+		moans := audio != nil && audio.Moans
+		score := r.Score
+		if moans {
+			score += 0.15
+		}
+		candidates = append(candidates, candidate{scene: s, score: score, moans: moans})
+	}
+	sort.Slice(candidates, func(i, j int) bool { return candidates[i].score > candidates[j].score })
+	if len(candidates) > params.Limit {
+		candidates = candidates[:params.Limit]
+	}
+	if len(candidates) == 0 {
+		return "No matching scenes found.", nil
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "Recommended scenes for %q:\n\n", params.Vibe)
+	for _, c := range candidates {
+		s := c.scene
+		_ = s.LoadPrimaryFile(ctx, repo.File)
+		fmt.Fprintf(&b, "- [Scene #%d - %s](/scenes/%d)", s.ID, s.Title, s.ID)
+		if c.moans {
+			fmt.Fprintf(&b, " \U0001F525 (moans detected)")
+		}
+		if f := s.Files.Primary(); f != nil {
+			fmt.Fprintf(&b, " | Duration: %.1fs", f.Duration)
+		}
+		b.WriteString("\n")
+	}
+	b.WriteString("\nExplain to the user why you picked these and which one you recommend most.")
+	return b.String(), nil
+}
+
 func searchSemantic(ctx context.Context, repo models.Repository, args json.RawMessage, cfg ToolConfig) (string, error) {
 	var params struct {
 		Query string `json:"query"`
@@ -1684,6 +1768,27 @@ func GetTools(cfg ToolConfig) []Tool {
 			Parameters:  searchSimilarScenesParam,
 			Execute: func(ctx context.Context, repo models.Repository, args json.RawMessage) (string, error) {
 				return searchSimilarScenes(ctx, repo, args, cfg)
+			},
+		},
+		{
+			Name:        "recommend_scene",
+			Description: "Recommend scenes from the library that match a mood or vibe description (e.g. \"brunette, bondage, rough\"). Uses embedding search and boosts scenes with detected moans. Use this when the user asks for something to watch or is in the mood for something specific.",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"vibe": map[string]interface{}{
+						"type":        "string",
+						"description": "What the user is in the mood for: performers, acts, looks, mood.",
+					},
+					"limit": map[string]interface{}{
+						"type":        "integer",
+						"description": "Number of scenes to recommend (1-5). Default 3.",
+					},
+				},
+				"required": []string{"vibe"},
+			},
+			Execute: func(ctx context.Context, repo models.Repository, args json.RawMessage) (string, error) {
+				return recommendScene(ctx, repo, args, cfg)
 			},
 		},
 		{

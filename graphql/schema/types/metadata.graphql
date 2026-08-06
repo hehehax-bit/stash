@@ -444,3 +444,12 @@ input CustomFieldsInput {
   "Remove any keys in this list"
   remove: [String!]
 }
+
+input AIMoodInput {
+  "Maximum scenes to tag. 0 for no limit."
+  max_scenes: Int
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+  "Re-tag scenes that already have moods. Default false."
+  overwrite: Boolean
+}
