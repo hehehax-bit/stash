@@ -379,6 +379,13 @@ func parseTranscriptionResponse(respBody []byte) (string, []TranscriptionSegment
 			}
 		}
 
+		// some servers (e.g. LocalAI) report segment times in nanoseconds;
+		// normalize everything to seconds
+		for i := range result.Segments {
+			result.Segments[i].Start = normalizeSegmentTime(result.Segments[i].Start)
+			result.Segments[i].End = normalizeSegmentTime(result.Segments[i].End)
+		}
+
 		return text, result.Segments
 	}
 
@@ -680,4 +687,14 @@ func (c *Client) MultiVisionCompletion(ctx context.Context, systemPrompt string,
 	}
 
 	return content, nil
+}
+
+// normalizeSegmentTime converts a transcription segment timestamp to seconds.
+// Values in the nanosecond range (> 1e6) are divided by 1e9; second-valued
+// timestamps pass through unchanged.
+func normalizeSegmentTime(v float64) float64 {
+	if v > 1e6 {
+		return v / 1e9
+	}
+	return v
 }

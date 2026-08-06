@@ -408,3 +408,47 @@ func newEmbeddingServer(t *testing.T, vec []float32) *httptest.Server {
 		require.NoError(t, json.NewEncoder(w).Encode(resp))
 	}))
 }
+
+func TestClientTranscribeSegments_Nanoseconds(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"task":"transcribe","language":"en","duration":10.0,"text":"hello world","segments":[{"id":0,"start":0,"end":9640000000,"text":"hello"},{"id":1,"start":9640000000,"end":10000000000,"text":"world"}]}`)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "whisper-1")
+	result, err := client.TranscribeResult(context.Background(), TranscribeRequest{
+		Filename:       "audio.wav",
+		Audio:          []byte("RIFF...."),
+		ResponseFormat: "verbose_json",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "hello world", result.Text)
+	require.Len(t, result.Segments, 2)
+	// nanosecond values must be normalized to seconds
+	assert.InDelta(t, 0.0, result.Segments[0].Start, 0.0001)
+	assert.InDelta(t, 9.64, result.Segments[0].End, 0.001)
+	assert.InDelta(t, 9.64, result.Segments[1].Start, 0.001)
+	assert.InDelta(t, 10.0, result.Segments[1].End, 0.001)
+}
+
+func TestClientTranscribeSegments_SecondsUntouched(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"task":"transcribe","language":"en","duration":2.0,"text":"hi","segments":[{"id":0,"start":0.5,"end":1.5,"text":"hi"}]}`)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "whisper-1")
+	result, err := client.TranscribeResult(context.Background(), TranscribeRequest{
+		Filename:       "audio.wav",
+		Audio:          []byte("RIFF...."),
+		ResponseFormat: "verbose_json",
+	})
+
+	require.NoError(t, err)
+	require.Len(t, result.Segments, 1)
+	assert.InDelta(t, 0.5, result.Segments[0].Start, 0.0001)
+	assert.InDelta(t, 1.5, result.Segments[0].End, 0.0001)
+}

@@ -334,6 +334,9 @@ const (
 	// AIImageEmbeddingModel is the model used to embed image content. Empty
 	// falls back to the text embedding model.
 	AIImageEmbeddingModel = "ai.image_embedding_model"
+	// AIImageEmbeddingBaseURL is the base URL for image embeddings (e.g. a
+	// CLIP server). Empty uses the main AI base URL.
+	AIImageEmbeddingBaseURL = "ai.image_embedding_base_url"
 
 	AIAutomatic1111Enabled = "ai.automatic1111_enabled"
 	AIAutomatic1111BaseURL = "ai.automatic1111_base_url"
@@ -1306,6 +1309,7 @@ type AIConfig struct {
 	Model                         string                 `json:"model"`
 	EmbeddingModel                string                 `json:"embedding_model"`
 	ImageEmbeddingModel           string                 `json:"image_embedding_model"`
+	ImageEmbeddingBaseURL         string                 `json:"image_embedding_base_url"`
 	SystemPrompt                  string                 `json:"system_prompt"`
 	Automatic1111Enabled          bool                   `json:"automatic1111_enabled"`
 	Automatic1111BaseURL          string                 `json:"automatic1111_base_url"`
@@ -1329,6 +1333,7 @@ type AIConfigInput struct {
 	Model                         *string                 `json:"model"`
 	EmbeddingModel                *string                 `json:"embedding_model"`
 	ImageEmbeddingModel           *string                 `json:"image_embedding_model"`
+	ImageEmbeddingBaseURL         *string                 `json:"image_embedding_base_url"`
 	SystemPrompt                  *string                 `json:"system_prompt"`
 	Automatic1111Enabled          *bool                   `json:"automatic1111_enabled"`
 	Automatic1111BaseURL          *string                 `json:"automatic1111_base_url"`
@@ -2244,6 +2249,14 @@ func (i *Config) GetAIEmbeddingEnabled() bool {
 
 func (i *Config) SetAIEmbeddingEnabled(v bool) {
 	i.SetBool(AIEmbeddingEnabled, v)
+}
+
+func (i *Config) GetAIImageEmbeddingBaseURL() string {
+	return i.getString(AIImageEmbeddingBaseURL)
+}
+
+func (i *Config) SetAIImageEmbeddingBaseURL(v string) {
+	i.SetString(AIImageEmbeddingBaseURL, v)
 }
 
 func (i *Config) GetAIEmbeddingModel() string {

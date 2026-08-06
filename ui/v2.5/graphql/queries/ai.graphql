@@ -6,6 +6,7 @@ query AIConfig {
     model
     embedding_model
     image_embedding_model
+    image_embedding_base_url
     system_prompt
     automatic1111_enabled
     automatic1111_base_url

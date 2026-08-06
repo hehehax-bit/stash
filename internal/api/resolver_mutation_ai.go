@@ -32,6 +32,9 @@ func (r *mutationResolver) ConfigureAi(ctx context.Context, input config.AIConfi
 	if input.ImageEmbeddingModel != nil {
 		cfg.SetAIImageEmbeddingModel(*input.ImageEmbeddingModel)
 	}
+	if input.ImageEmbeddingBaseURL != nil {
+		cfg.SetAIImageEmbeddingBaseURL(*input.ImageEmbeddingBaseURL)
+	}
 	if input.SystemPrompt != nil {
 		cfg.SetAISystemPrompt(*input.SystemPrompt)
 	}
@@ -89,6 +92,7 @@ func (r *mutationResolver) ConfigureAi(ctx context.Context, input config.AIConfi
 		Model:                         cfg.GetAIModel(),
 		EmbeddingModel:                cfg.GetAIEmbeddingModel(),
 		ImageEmbeddingModel:           cfg.GetAIImageEmbeddingModel(),
+		ImageEmbeddingBaseURL:         cfg.GetAIImageEmbeddingBaseURL(),
 		SystemPrompt:                  cfg.GetAISystemPrompt(),
 		Automatic1111Enabled:          cfg.GetAIAutomatic1111Enabled(),
 		Automatic1111BaseURL:          cfg.GetAIAutomatic1111BaseURL(),

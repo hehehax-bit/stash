@@ -61,6 +61,9 @@ const SettingsAIPanel: React.FC = () => {
   const [translationLanguage, setTranslationLanguage] = useState<string | null>(
     null
   );
+  const [imageEmbeddingBaseUrl, setImageEmbeddingBaseUrl] = useState<
+    string | null
+  >(null);
   const [embeddingRefreshHours, setEmbeddingRefreshHours] = useState<
     number | null
   >(null);
@@ -105,6 +108,8 @@ const SettingsAIPanel: React.FC = () => {
   const currentFramesToSample = framesToSample ?? config?.frames_to_sample ?? 0;
   const currentTranslationLanguage =
     translationLanguage ?? config?.translation_language ?? "";
+  const currentImageEmbeddingBaseUrl =
+    imageEmbeddingBaseUrl ?? config?.image_embedding_base_url ?? "";
   const currentEmbeddingRefreshHours =
     embeddingRefreshHours ??
     config?.scheduled_tasks?.embedding_refresh_hours ??
@@ -119,6 +124,7 @@ const SettingsAIPanel: React.FC = () => {
     model: currentModel,
     embedding_model: currentEmbeddingModel,
     image_embedding_model: currentImageEmbeddingModel,
+    image_embedding_base_url: currentImageEmbeddingBaseUrl,
     system_prompt: currentSystemPrompt,
     transcription_base_url: currentTranscriptionBaseURL,
     transcription_model: currentTranscriptionModel,
@@ -221,6 +227,16 @@ const SettingsAIPanel: React.FC = () => {
           onChange={(v) => {
             setImageEmbeddingModel(v);
             save({ image_embedding_model: v });
+          }}
+        />
+        <StringSetting
+          id="ai-image-embedding-base-url"
+          heading="Image Embedding Base URL"
+          subHeading="Base URL of the image embedding server (e.g. http://<host>:8000). Leave empty to use the AI base URL."
+          value={currentImageEmbeddingBaseUrl}
+          onChange={(v) => {
+            setImageEmbeddingBaseUrl(v);
+            save({ image_embedding_base_url: v });
           }}
         />
         <StringSetting

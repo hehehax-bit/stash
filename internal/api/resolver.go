@@ -118,6 +118,10 @@ func (r *Resolver) AIConfig() AIConfigResolver {
 
 type aiConfigResolver struct{ *Resolver }
 
+func (r *aiConfigResolver) ImageEmbeddingBaseURL(ctx context.Context, obj *config.AIConfig) (string, error) {
+	return obj.ImageEmbeddingBaseURL, nil
+}
+
 func (r *aiConfigResolver) ScheduledTasks(ctx context.Context, obj *config.AIConfig) (*AIScheduledTasksConfig, error) {
 	return &AIScheduledTasksConfig{
 		EmbeddingRefreshHours: obj.ScheduledTasks.EmbeddingRefreshHours,
@@ -130,6 +134,11 @@ func (r *Resolver) AIConfigInput() AIConfigInputResolver {
 }
 
 type aiConfigInputResolver struct{ *Resolver }
+
+func (r *aiConfigInputResolver) ImageEmbeddingBaseURL(ctx context.Context, obj *config.AIConfigInput, data *string) error {
+	obj.ImageEmbeddingBaseURL = data
+	return nil
+}
 
 func (r *aiConfigInputResolver) ScheduledTasks(ctx context.Context, obj *config.AIConfigInput, data *AIScheduledTasksConfigInput) error {
 	if data == nil {

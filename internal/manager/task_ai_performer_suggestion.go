@@ -38,6 +38,10 @@ func (j *AIPerformerMergeSuggestJob) Execute(ctx context.Context, progress *job.
 	}
 
 	baseURL := instance.Config.GetAIBaseURL()
+	imageEmbedBaseURL := instance.Config.GetAIImageEmbeddingBaseURL()
+	if imageEmbedBaseURL == "" {
+		imageEmbedBaseURL = baseURL
+	}
 	model := instance.Config.GetAIImageEmbeddingModel()
 	if model == "" {
 		model = instance.Config.GetAIEmbeddingModel()
@@ -49,7 +53,7 @@ func (j *AIPerformerMergeSuggestJob) Execute(ctx context.Context, progress *job.
 		return fmt.Errorf("no embedding model configured")
 	}
 
-	client := ai.NewEmbeddingClient(baseURL, model, instance.Config.GetAIEndpoint())
+	client := ai.NewEmbeddingClient(imageEmbedBaseURL, model, instance.Config.GetAIEndpoint())
 	if j.input.Timeout != nil && *j.input.Timeout > 0 {
 		client.SetTimeout(time.Duration(*j.input.Timeout) * time.Second)
 	}

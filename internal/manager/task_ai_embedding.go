@@ -69,8 +69,12 @@ func (j *AIEmbeddingJob) Execute(ctx context.Context, progress *job.Progress) er
 	}
 
 	endpoint := instance.Config.GetAIEndpoint()
+	imageEmbedBaseURL := instance.Config.GetAIImageEmbeddingBaseURL()
+	if imageEmbedBaseURL == "" {
+		imageEmbedBaseURL = baseURL
+	}
 
-	logger.Infof("Embedding job config: baseURL=%s, model=%s, embedModel=%s, imageEmbedModel=%s, endpoint=%s", baseURL, model, embedModel, imageEmbedModel, endpoint)
+	logger.Infof("Embedding job config: baseURL=%s, model=%s, embedModel=%s, imageEmbedModel=%s, imageEmbedBaseURL=%s, endpoint=%s", baseURL, model, embedModel, imageEmbedModel, imageEmbedBaseURL, endpoint)
 
 	if baseURL == "" {
 		logger.Error("AI base URL is not configured")
@@ -108,7 +112,7 @@ func (j *AIEmbeddingJob) Execute(ctx context.Context, progress *job.Progress) er
 	var client *ai.Client
 	modelForEmbedding := embedModel
 	if j.input.Visual {
-		client = ai.NewEmbeddingClient(baseURL, imageEmbedModel, endpoint)
+		client = ai.NewEmbeddingClient(imageEmbedBaseURL, imageEmbedModel, endpoint)
 		modelForEmbedding = imageEmbedModel
 	} else {
 		client = ai.NewEmbeddingClient(baseURL, embedModel, endpoint)

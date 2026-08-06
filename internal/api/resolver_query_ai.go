@@ -25,6 +25,7 @@ func (r *queryResolver) AiConfig(ctx context.Context) (*config.AIConfig, error) 
 		Model:                         cfg.GetAIModel(),
 		EmbeddingModel:                cfg.GetAIEmbeddingModel(),
 		ImageEmbeddingModel:           cfg.GetAIImageEmbeddingModel(),
+		ImageEmbeddingBaseURL:         cfg.GetAIImageEmbeddingBaseURL(),
 		SystemPrompt:                  cfg.GetAISystemPrompt(),
 		Automatic1111Enabled:          cfg.GetAIAutomatic1111Enabled(),
 		Automatic1111BaseURL:          cfg.GetAIAutomatic1111BaseURL(),

@@ -85,3 +85,12 @@ Everything added on top of upstream stash. Features are surfaced in **Settings >
 - **Scheduled AI maintenance**: automatic stale-embedding refresh and audio analysis intervals (Settings > AI).
 - **Job queue polish**: AI badge + AI-tasks-only filter.
 - **Chat "Pick me a scene"** and library-aware answers.
+
+## Server setup (LocalAI / whisper / image embeddings)
+
+The AI features work against any OpenAI-compatible server. A proven setup:
+
+- **LLM + vision + text embeddings**: LocalAI (`http://<host>:8080/v1`, endpoint `lmstudio`), e.g. `qwen3-vl-8b` (GGUF + mmproj) and `qwen3-embedding-0.6b` (gallery).
+- **Image embeddings**: a CLIP-style server such as a small FastAPI service serving `nomic-embed-vision-v1.5` at `/embeddings` (OpenAI shape). Configure it via the **Image Embedding Base URL** setting (empty = use the AI base URL). Used by visual embedding mode and performer merge suggestions.
+- **Transcription**: LocalAI's `/v1/audio/transcriptions` (whisper.cpp backend, e.g. `whisper-large-v3-turbo` via a `whisper-1` model alias). Timestamped segments are normalized to seconds automatically.
+- LM Studio works as a drop-in alternative for the LLM/embedding roles (except image embeddings, which llama.cpp does not serve standalone).
