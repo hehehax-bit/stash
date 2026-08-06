@@ -145,5 +145,6 @@ func (db *Database) Repository() models.Repository {
 		AIPerformerCandidate:  db.AIPerformerCandidate,
 		AIMood:                db.AIMood,
 		AISavedMoment:         db.AISavedMoment,
+		AISavedPlan:           db.AISavedPlan,
 	}
 }

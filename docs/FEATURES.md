@@ -36,6 +36,20 @@ Everything added on top of upstream stash. Features are surfaced in **Settings >
 - **Performer discovery**: finds recurring unknown performers in untagged scenes/images; review creates "Unknown Performer N" or merges into existing.
 - All review dialogs have **Apply all / Reject all**.
 
+## The Heaven Update
+
+- **Performer session**: a Her session button builds a 30-minute afterglow queue of a performer's scenes.
+- **Auto-advance on O**: logging an O during afterglow immediately advances to the next scene.
+- **Who is she?**: a live chip shows the performer of the current segment; tap to open her page.
+- **Transcend mode**: 60-minute build-up session of the steamiest scenes with afterglow, random edging, and a blind every third scene.
+- **The Throne**: XP ranks (Novice Gooner to Heavenly) with progress on the scoreboard and hub.
+- **Climax projection**: a live intensity bar tracking the playback position during afterglow.
+- **Heavenly playlists**: saved session plans replayed from the builder or scoreboard.
+- **The Pantheon**: longest session, total session time, and session count on the scoreboard.
+- **Per-scene height**: a sparkle score (steam + O + moods) on scene cards.
+- **The Oracle**: describe a session in words; the chat tool or the builder's Oracle box plans it for you.
+- **Night Chapel**: a warm dim candlelight theme that deepens goon mode.
+
 ## The Ascension Update
 
 - **Edging mode**: pause playback after a configurable interval (1-10 min, default 3) with a Continue overlay.

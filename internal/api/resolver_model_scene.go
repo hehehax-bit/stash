@@ -38,6 +38,18 @@ func (r *sceneResolver) Moods(ctx context.Context, obj *models.Scene) ([]string,
 	return moods, nil
 }
 
+func (r *sceneResolver) Height(ctx context.Context, obj *models.Scene) (int, error) {
+	var heights map[int]int
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		heights, err = r.repository.Scene.GetSceneHeights(ctx, []int{obj.ID})
+		return err
+	}); err != nil {
+		return 0, err
+	}
+	return heights[obj.ID], nil
+}
+
 func (r *sceneResolver) SteamScore(ctx context.Context, obj *models.Scene) (int, error) {
 	var scores map[int]int
 	if err := r.withReadTxn(ctx, func(ctx context.Context) error {

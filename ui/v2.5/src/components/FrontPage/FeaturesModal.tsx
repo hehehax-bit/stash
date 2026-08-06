@@ -1,86 +1,35 @@
-import React, { useState } from "react";
-import { Button } from "react-bootstrap";
+import React, { useMemo, useState } from "react";
+import { Button, Form } from "react-bootstrap";
 import { FormattedMessage, useIntl } from "react-intl";
 import { ModalComponent } from "src/components/Shared/Modal";
-import { faRocket } from "@fortawesome/free-solid-svg-icons";
-
-const FEATURE_GROUPS: { heading: string; items: string[] }[] = [
-  {
-    heading: "AI Chat & Search",
-    items: [
-      "AI chat with sessions, image input, and tools",
-      "Ask AI from scene, image, and performer pages",
-      "Library context: the chat can answer questions about your collection",
-      "recommend_scene tool: tell it a vibe, get scene links",
-      "Semantic search and similar-items panels with batch actions",
-      "Transcript search across scenes",
-    ],
-  },
-  {
-    heading: "Tagging & Analysis",
-    items: [
-      "AI scene/image tagging with performers-only and fill-missing modes",
-      "Scene segmentation into markers with performers and intensity",
-      "Climax map, Skip to the good part, highlight clips",
-      "AI mood tagging with card badges, filter, and mood groups",
-      "Audio analysis: timestamps, summaries, moans — moan leaderboard",
-      "Steam score per scene (fire badges, filter, sort)",
-      "Loop detection, smart collections, duplicate detection with merge",
-    ],
-  },
-  {
-    heading: "Review Flows",
-    items: [
-      "Performer merge suggestions with review",
-      "AI audit of previously tagged scenes",
-      "AI translation with review before applying",
-      "Performer discovery with create/merge/reject",
-      "Apply all / Reject all in every review dialog",
-    ],
-  },
-  {
-    heading: "The Gooner Update",
-    items: [
-      "Goon mode (G key): steam-filtered browsing",
-      "Fap Roulette and Afterglow reel mode with session recap",
-      "Session Builder and goon reel generation",
-      "Daily Goon widget and the For You hub",
-      "O board on the stats page",
-      "Quick-hide (H key) for shared screens",
-    ],
-  },
-  {
-    heading: "The Ascension Update",
-    items: [
-      "Edging mode with configurable pause interval",
-      "Blind goon (blurred mystery scenes)",
-      "Vibe radio (endless mood queue)",
-      "Saved moments with favorites page and reel",
-      "Build-up / peak-first session ordering and ritual mood sequences",
-      "Watch-along chat from the player",
-      "Goon Scoreboard page and achievements",
-    ],
-  },
-  {
-    heading: "Under the hood",
-    items: [
-      "Text + visual embeddings with stale-only refresh",
-      "Scheduled AI maintenance",
-      "Job queue AI badges and filter",
-    ],
-  },
-];
+import { Icon } from "src/components/Shared/Icon";
+import { faRocket, faSearch } from "@fortawesome/free-solid-svg-icons";
+import { FEATURES, FEATURE_CATEGORIES } from "./featuresData";
 
 export const FeaturesModal: React.FC<{ onClose: () => void }> = ({
   onClose,
 }) => {
   const intl = useIntl();
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (q === "") return FEATURES;
+    return FEATURES.filter(
+      (f) =>
+        f.name.toLowerCase().includes(q) ||
+        f.description.toLowerCase().includes(q) ||
+        f.location.toLowerCase().includes(q) ||
+        f.category.toLowerCase().includes(q)
+    );
+  }, [query]);
 
   return (
     <ModalComponent
       show
       icon={faRocket}
       header={intl.formatMessage({ id: "features.heading" })}
+      dialogClassName="modal-xl"
       onHide={onClose}
       cancel={{
         onClick: onClose,
@@ -88,16 +37,56 @@ export const FeaturesModal: React.FC<{ onClose: () => void }> = ({
         variant: "secondary",
       }}
     >
-      {FEATURE_GROUPS.map((group) => (
-        <div key={group.heading} className="mb-3">
-          <h6>{group.heading}</h6>
-          <ul className="mb-0">
-            {group.items.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
-      ))}
+      <Form.Group>
+        <Form.Control
+          type="text"
+          value={query}
+          placeholder={intl.formatMessage({ id: "features.search" })}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setQuery(e.currentTarget.value)
+          }
+        />
+      </Form.Group>
+
+      <div className="features-guide">
+        {FEATURE_CATEGORIES.map((category) => {
+          const entries = filtered.filter((f) => f.category === category);
+          if (entries.length === 0) return null;
+          return (
+            <div key={category} className="feature-category">
+              <h6 className="feature-category-title">{category}</h6>
+              <div className="feature-grid">
+                {entries.map((f) => (
+                  <div key={f.id} className="feature-card">
+                    <div className="feature-card-header">
+                      <span className="feature-emoji">{f.emoji}</span>
+                      <strong>{f.name}</strong>
+                    </div>
+                    <p className="feature-description">{f.description}</p>
+                    <div className="feature-location">
+                      <span className="feature-label">
+                        <FormattedMessage id="features.where" />:
+                      </span>{" "}
+                      {f.location}
+                    </div>
+                    <div className="feature-howto">
+                      <span className="feature-label">
+                        <FormattedMessage id="features.how" />:
+                      </span>{" "}
+                      {f.howTo}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        {filtered.length === 0 && (
+          <div className="text-muted">
+            <FormattedMessage id="features.no_results" />
+          </div>
+        )}
+      </div>
     </ModalComponent>
   );
 };
@@ -108,7 +97,7 @@ export const FeaturesButton: React.FC = () => {
   return (
     <>
       <Button variant="secondary" onClick={() => setOpen(true)}>
-        <FormattedMessage id="features.button" />
+        <Icon icon={faSearch} /> <FormattedMessage id="features.button" />
       </Button>
       {open && <FeaturesModal onClose={() => setOpen(false)} />}
     </>

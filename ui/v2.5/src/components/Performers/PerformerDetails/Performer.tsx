@@ -320,6 +320,36 @@ const PerformerPage: React.FC<IProps> = PatchComponent(
       );
     }
 
+    const [buildSession, { loading: sessionBuilding }] =
+      GQL.useAiSessionBuildLazyQuery();
+
+    async function onStartSession() {
+      try {
+        const result = await buildSession({
+          variables: {
+            input: {
+              duration_minutes: 30,
+              performer_ids: [performer.id],
+            },
+          },
+        });
+        const plan = result.data?.aiSessionBuild;
+        if (!plan || plan.scenes.length === 0) {
+          Toast.error(
+            intl.formatMessage({ id: "config.tasks.ai_session.empty" })
+          );
+          return;
+        }
+        const params = plan.scenes
+          .map((s) => `qs=${s.scene_id}`)
+          .concat("afterglow=1", "autoplay=true")
+          .join("&");
+        history.push(`/scenes/${plan.scenes[0].scene_id}?${params}`);
+      } catch (e) {
+        Toast.error(e);
+      }
+    }
+
     function renderMergeButton() {
       return (
         <Button variant="secondary" onClick={() => setIsMerging(true)}>
@@ -535,6 +565,13 @@ const PerformerPage: React.FC<IProps> = PatchComponent(
                             {renderMergeButton()}
                             <Button variant="secondary" onClick={onAITag}>
                               AI Tag
+                            </Button>
+                            <Button
+                              variant="outline-danger"
+                              onClick={() => onStartSession()}
+                              disabled={sessionBuilding}
+                            >
+                              {sessionBuilding ? "…" : "🔥 Her session"}
                             </Button>
                             <Button variant="secondary" onClick={onAskAI}>
                               <FormattedMessage id="actions.ask_ai" />

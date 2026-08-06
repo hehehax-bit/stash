@@ -308,6 +308,74 @@ func (r *queryResolver) AiOHistoryTimeline(ctx context.Context, days *int) ([]*A
 	return out, nil
 }
 
+type AISavedPlan struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	SceneIDs  []string  `json:"scene_ids"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type AISessionDescribeResult struct {
+	DurationMinutes int      `json:"duration_minutes"`
+	Moods           []string `json:"moods"`
+	MinSteam        int      `json:"min_steam"`
+	Vibe            string   `json:"vibe"`
+	Ordering        string   `json:"ordering"`
+}
+
+func (r *queryResolver) AiSessionDescribe(ctx context.Context, text string) (*AISessionDescribeResult, error) {
+	cfg := manager.GetInstance().Config
+	baseURL := cfg.GetAIBaseURL()
+	model := cfg.GetAIModel()
+	if baseURL == "" || model == "" {
+		return nil, fmt.Errorf("AI is not configured")
+	}
+
+	client := ai.NewClient(baseURL, model)
+	intent, err := ai.ParseSessionIntent(ctx, client, text)
+	if err != nil {
+		return nil, err
+	}
+
+	duration := intent.DurationMinutes
+	minSteam := intent.MinSteam
+	ordering := intent.Ordering
+	vibe := intent.Vibe
+
+	return &AISessionDescribeResult{
+		DurationMinutes: duration,
+		Moods:           intent.Moods,
+		MinSteam:        minSteam,
+		Vibe:            vibe,
+		Ordering:        ordering,
+	}, nil
+}
+
+func (r *queryResolver) AiSavedPlans(ctx context.Context) ([]*AISavedPlan, error) {
+	var found []*models.AISavedPlan
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		found, err = r.repository.AISavedPlan.FindAll(ctx)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+
+	out := make([]*AISavedPlan, 0, len(found))
+	for _, p := range found {
+		item := &AISavedPlan{
+			ID:        fmt.Sprintf("%d", p.ID),
+			Name:      p.Name,
+			CreatedAt: time.Unix(p.CreatedAt, 0),
+		}
+		for _, id := range p.SceneIDs {
+			item.SceneIDs = append(item.SceneIDs, fmt.Sprintf("%d", id))
+		}
+		out = append(out, item)
+	}
+	return out, nil
+}
+
 func (r *queryResolver) AiSavedMoments(ctx context.Context) ([]*AISavedMoment, error) {
 	baseURL, _ := ctx.Value(BaseURLCtxKey).(string)
 

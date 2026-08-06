@@ -453,6 +453,11 @@ const SceneCardImage = React.memo(
               <Icon icon={faFire} /> {props.scene.steam_score}
             </span>
           )}
+        {props.scene.height !== undefined && props.scene.height > 0 && (
+          <span className="height-badge" title="Height">
+            ✨ {props.scene.height}
+          </span>
+        )}
         {props.scene.moods && props.scene.moods.length > 0 && (
           <span className="mood-badges" title={props.scene.moods.join(", ")}>
             {props.scene.moods.slice(0, 2).map((m) => (

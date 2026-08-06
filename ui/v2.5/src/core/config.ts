@@ -97,6 +97,9 @@ export interface IUIConfig {
   // if true, goon mode is on by default (press G to toggle)
   goonMode?: boolean;
 
+  // if true, the Night Chapel warm dim theme is applied
+  nightChapel?: boolean;
+
   // maximum number of items to shown in the dropdown list - defaults to 200
   // upper limit of 1000
   maxOptionsShown?: number;

@@ -38,6 +38,7 @@ type SceneQueryer interface {
 	GetSteamScores(ctx context.Context, sceneIDs []int) (map[int]int, error)
 	OHistoryLeaderboard(ctx context.Context, limit int) ([]*AOHistoryLeaderboardEntry, error)
 	OHistoryTimeline(ctx context.Context, days int) ([]*AIOHistoryTimelineEntry, error)
+	GetSceneHeights(ctx context.Context, sceneIDs []int) (map[int]int, error)
 }
 
 // SceneCounter provides methods to count scenes.

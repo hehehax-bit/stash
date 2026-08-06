@@ -490,3 +490,25 @@ func sceneIDsToInts(scenes []*models.Scene) []int {
 	}
 	return out
 }
+
+func TestGetSceneHeights(t *testing.T) {
+	withRollbackTxn(func(ctx context.Context) error {
+		require.NoError(t, db.AISceneAudio.Upsert(ctx, &models.AISceneAudio{
+			SceneID:      sceneIDs[sceneIdxWithTag],
+			HasAudio:     true,
+			Moans:        true,
+			SilenceRatio: 10,
+		}))
+		require.NoError(t, db.AIMood.Create(ctx, &models.AISceneMood{SceneID: sceneIDs[sceneIdxWithTag], Mood: "rough"}))
+		require.NoError(t, db.AIMood.Create(ctx, &models.AISceneMood{SceneID: sceneIDs[sceneIdxWithTag], Mood: "anal"}))
+		_, err := db.Scene.AddO(ctx, sceneIDs[sceneIdxWithTag], []time.Time{time.Now()})
+		require.NoError(t, err)
+
+		heights, err := db.Scene.GetSceneHeights(ctx, []int{sceneIDs[sceneIdxWithTag]})
+		require.NoError(t, err)
+		// steam 10 + o bonus 3 + mood bonus 2 = 15
+		assert.Equal(t, 15, heights[sceneIDs[sceneIdxWithTag]])
+
+		return nil
+	})
+}

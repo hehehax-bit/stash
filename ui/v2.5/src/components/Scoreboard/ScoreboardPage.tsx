@@ -1,8 +1,11 @@
 import React from "react";
+import { useHistory } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { FormattedMessage } from "react-intl";
 import * as GQL from "src/core/generated-graphql";
 import { LoadingIndicator } from "src/components/Shared/LoadingIndicator";
+import { ThroneProgress } from "src/components/FrontPage/ThroneProgress";
+import { mutateAiDeletePlan } from "src/core/StashService";
 
 function loadStreak(): number {
   try {
@@ -53,6 +56,17 @@ export const ScoreboardPage: React.FC = () => {
     variables: { days: 30 },
   });
   const { data: savedData } = GQL.useAiSavedMomentsQuery();
+  const { data: plansData, refetch: refetchPlans } = GQL.useAiSavedPlansQuery();
+  const history = useHistory();
+
+  function playPlan(sceneIds: string[]) {
+    if (sceneIds.length === 0) return;
+    const params = sceneIds
+      .map((id) => `qs=${id}`)
+      .concat("afterglow=1", "autoplay=true")
+      .join("&");
+    history.push(`/scenes/${sceneIds[0]}?${params}`);
+  }
 
   const moaners = (moanData?.aiMoanLeaderboard ?? []).filter(
     (e) => e.performer
@@ -63,6 +77,16 @@ export const ScoreboardPage: React.FC = () => {
   const timeline = timelineData?.aiOHistoryTimeline ?? [];
   const savedCount = savedData?.aiSavedMoments?.length ?? 0;
   const streak = loadStreak();
+  const sessionStats = (() => {
+    try {
+      const raw = localStorage.getItem("stash.goonSessionStats");
+      return raw
+        ? JSON.parse(raw)
+        : { totalMinutes: 0, maxMinutes: 0, sessions: 0 };
+    } catch {
+      return { totalMinutes: 0, maxMinutes: 0, sessions: 0 };
+    }
+  })();
 
   if (!moanData && !oData && !timelineData && !savedData) {
     return <LoadingIndicator />;
@@ -73,6 +97,10 @@ export const ScoreboardPage: React.FC = () => {
       <h3 className="my-3">
         <FormattedMessage id="scoreboard.heading" />
       </h3>
+
+      <div className="col-12">
+        <ThroneProgress />
+      </div>
 
       <div className="row">
         <div className="col-12 col-sm-6">
@@ -104,12 +132,70 @@ export const ScoreboardPage: React.FC = () => {
       </div>
 
       <div className="row">
-        <div className="col-12 col-sm-4">
+        <div className="col-12 col-sm-3">
           <div className="scoreboard-section">
             <h5>
               <FormattedMessage id="scoreboard.streak" />
             </h5>
             <p className="display-4">{streak} 🔥</p>
+          </div>
+        </div>
+        <div className="col-12 col-sm-3">
+          <div className="scoreboard-section">
+            <h5>
+              <FormattedMessage id="scoreboard.longest" />
+            </h5>
+            <p className="display-4">{sessionStats.maxMinutes} min</p>
+          </div>
+        </div>
+        <div className="col-12 col-sm-3">
+          <div className="scoreboard-section">
+            <h5>
+              <FormattedMessage id="scoreboard.total_time" />
+            </h5>
+            <p className="display-4">{sessionStats.totalMinutes} min</p>
+          </div>
+        </div>
+        <div className="col-12 col-sm-3">
+          <div className="scoreboard-section">
+            <h5>
+              <FormattedMessage id="scoreboard.sessions" />
+            </h5>
+            <p className="display-4">{sessionStats.sessions}</p>
+          </div>
+        </div>
+        <div className="col-12">
+          <div className="scoreboard-section">
+            <h5>
+              <FormattedMessage id="config.tasks.ai_session.saved_plans" />
+            </h5>
+            {(plansData?.aiSavedPlans ?? []).length === 0 ? (
+              <div className="text-muted">
+                <FormattedMessage id="scoreboard.no_plans" />
+              </div>
+            ) : (
+              <ul className="mb-0">
+                {(plansData?.aiSavedPlans ?? []).map((p) => (
+                  <li key={p.id}>
+                    <button
+                      className="btn btn-sm btn-link"
+                      onClick={() => playPlan(p.scene_ids)}
+                    >
+                      ▶ {p.name}
+                    </button>
+                    <button
+                      className="btn btn-sm btn-link text-danger"
+                      onClick={async () => {
+                        await mutateAiDeletePlan(p.id);
+                        refetchPlans();
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
         <div className="col-12 col-sm-4">

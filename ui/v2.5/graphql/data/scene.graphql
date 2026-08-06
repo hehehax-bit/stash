@@ -11,6 +11,7 @@ fragment SceneData on Scene {
   organized
   has_embedding
   steam_score
+  height
   moods
   interactive
   interactive_speed

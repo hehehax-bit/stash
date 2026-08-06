@@ -41,6 +41,7 @@ type Repository struct {
 	AIPerformerCandidate  AIPerformerCandidateReaderWriter
 	AIMood                AIMoodReaderWriter
 	AISavedMoment         AISavedMomentReaderWriter
+	AISavedPlan           AISavedPlanReaderWriter
 }
 
 func (r *Repository) WithTxn(ctx context.Context, fn txn.TxnFunc) error {

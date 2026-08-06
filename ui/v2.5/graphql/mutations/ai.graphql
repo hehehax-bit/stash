@@ -204,3 +204,11 @@ mutation AiSaveMoment($marker_id: ID!) {
 mutation AiUnsaveMoment($marker_id: ID!) {
   aiUnsaveMoment(marker_id: $marker_id)
 }
+
+mutation AiSavePlan($name: String!, $scene_ids: [ID!]!) {
+  aiSavePlan(name: $name, scene_ids: $scene_ids)
+}
+
+mutation AiDeletePlan($plan_id: ID!) {
+  aiDeletePlan(plan_id: $plan_id)
+}

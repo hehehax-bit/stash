@@ -214,6 +214,39 @@ func (r *mutationResolver) MetadataAIMoodTag(ctx context.Context, input AIMoodIn
 	return strconv.Itoa(jobID), nil
 }
 
+func (r *mutationResolver) AiSavePlan(ctx context.Context, name string, sceneIDs []string) (string, error) {
+	ids := make([]int, len(sceneIDs))
+	for i, id := range sceneIDs {
+		n, err := strconv.Atoi(id)
+		if err != nil {
+			return "", fmt.Errorf("converting scene id: %w", err)
+		}
+		ids[i] = n
+	}
+
+	plan := &models.AISavedPlan{Name: name, SceneIDs: ids}
+	if err := manager.GetInstance().Repository.WithTxn(ctx, func(ctx context.Context) error {
+		return manager.GetInstance().Repository.AISavedPlan.Create(ctx, plan)
+	}); err != nil {
+		return "", err
+	}
+	return strconv.FormatInt(plan.ID, 10), nil
+}
+
+func (r *mutationResolver) AiDeletePlan(ctx context.Context, planID string) (bool, error) {
+	id, err := strconv.ParseInt(planID, 10, 64)
+	if err != nil {
+		return false, fmt.Errorf("converting plan id: %w", err)
+	}
+
+	if err := manager.GetInstance().Repository.WithTxn(ctx, func(ctx context.Context) error {
+		return manager.GetInstance().Repository.AISavedPlan.DeleteByID(ctx, id)
+	}); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (r *mutationResolver) AiSaveMoment(ctx context.Context, markerID string) (bool, error) {
 	id, err := strconv.Atoi(markerID)
 	if err != nil {

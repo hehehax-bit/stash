@@ -450,3 +450,22 @@ query AiOHistoryTimeline($days: Int) {
     count
   }
 }
+
+query AiSavedPlans {
+  aiSavedPlans {
+    id
+    name
+    scene_ids
+    created_at
+  }
+}
+
+query AiSessionDescribe($text: String!) {
+  aiSessionDescribe(text: $text) {
+    duration_minutes
+    moods
+    min_steam
+    vibe
+    ordering
+  }
+}

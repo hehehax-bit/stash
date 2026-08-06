@@ -1097,6 +1097,29 @@ func (_m *SceneReaderWriter) GetPerformerIDs(ctx context.Context, relatedID int)
 	return r0, r1
 }
 
+// GetSceneHeights provides a mock function with given fields: ctx, sceneIDs
+func (_m *SceneReaderWriter) GetSceneHeights(ctx context.Context, sceneIDs []int) (map[int]int, error) {
+	ret := _m.Called(ctx, sceneIDs)
+
+	var r0 map[int]int
+	if rf, ok := ret.Get(0).(func(context.Context, []int) map[int]int); ok {
+		r0 = rf(ctx, sceneIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[int]int)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, []int) error); ok {
+		r1 = rf(ctx, sceneIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetStashIDs provides a mock function with given fields: ctx, relatedID
 func (_m *SceneReaderWriter) GetStashIDs(ctx context.Context, relatedID int) ([]models.StashID, error) {
 	ret := _m.Called(ctx, relatedID)

@@ -53,6 +53,8 @@ type Scene {
   has_embedding: Boolean!
   "Steam score 0-10 combining moan detection, silence ratio, and explicit tag coverage."
   steam_score: Int!
+  "Height score 0-25: steam plus bonuses for logged O's and AI moods."
+  height: Int!
   "AI-detected moods for this scene."
   moods: [String!]!
   interactive: Boolean!

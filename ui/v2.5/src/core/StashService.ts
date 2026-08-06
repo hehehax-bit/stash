@@ -3008,6 +3008,18 @@ export const mutateMetadataAIMoodTag = (input: GQL.AiMoodInput) =>
     variables: { input },
   });
 
+export const mutateAiSavePlan = (name: string, sceneIds: string[]) =>
+  client.mutate<GQL.AiSavePlanMutation>({
+    mutation: GQL.AiSavePlanDocument,
+    variables: { name, scene_ids: sceneIds },
+  });
+
+export const mutateAiDeletePlan = (planId: string) =>
+  client.mutate<GQL.AiDeletePlanMutation>({
+    mutation: GQL.AiDeletePlanDocument,
+    variables: { plan_id: planId },
+  });
+
 export const mutateAiSaveMoment = (markerId: string) =>
   client.mutate<GQL.AiSaveMomentMutation>({
     mutation: GQL.AiSaveMomentDocument,

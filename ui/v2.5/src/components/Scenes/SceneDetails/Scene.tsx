@@ -55,6 +55,7 @@ import {
   faEyeSlash,
   faRadio,
   faComments,
+  faDove,
 } from "@fortawesome/free-solid-svg-icons";
 import { objectPath, objectTitle } from "src/core/files";
 import { RatingSystem } from "src/components/Shared/Rating/RatingSystem";
@@ -834,6 +835,82 @@ const ScenePage: React.FC<IProps> = PatchComponent("ScenePage", (props) => {
   );
 });
 
+const WhoIsSheChip: React.FC<{ sceneId?: string }> = ({ sceneId }) => {
+  const history = useHistory();
+  const { data } = GQL.useFindSceneMarkerTagsQuery({
+    variables: { id: sceneId ?? "" },
+    skip: !sceneId,
+  });
+  const markers =
+    data?.sceneMarkerTags.flatMap((tag) => tag.scene_markers) ?? [];
+  const [time, setTime] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setTime(getPlayerPosition() ?? 0), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const sorted = [...markers].sort((a, b) => a.seconds - b.seconds);
+  const idx = sorted.findIndex((m) => m.seconds <= time);
+  const current = idx >= 0 ? sorted[idx] : null;
+  const performer = current?.performers?.[0];
+  if (!performer) return null;
+
+  return (
+    <Button
+      variant="outline-primary"
+      className="who-is-she-chip"
+      onClick={() => history.push(`/performers/${performer.id}`)}
+    >
+      {performer.name} ✨
+    </Button>
+  );
+};
+
+const ClimaxProjection: React.FC<{
+  sceneId?: string;
+  active: boolean;
+}> = ({ sceneId, active }) => {
+  const { data } = GQL.useFindSceneMarkerTagsQuery({
+    variables: { id: sceneId ?? "" },
+    skip: !sceneId || !active,
+  });
+  const markers =
+    data?.sceneMarkerTags.flatMap((tag) => tag.scene_markers) ?? [];
+  const [time, setTime] = useState(0);
+
+  useEffect(() => {
+    if (!active) return;
+    const t = setInterval(() => setTime(getPlayerPosition() ?? 0), 250);
+    return () => clearInterval(t);
+  }, [active]);
+
+  const intensityMarkers = markers.filter(
+    (m) => m.intensity !== null && m.intensity !== undefined
+  );
+  if (!active || intensityMarkers.length < 2) return null;
+
+  const total =
+    Math.max(...intensityMarkers.map((m) => m.end_seconds ?? m.seconds)) || 1;
+  const pos = Math.min(100, (time / total) * 100);
+
+  return (
+    <div className="climax-projection">
+      {intensityMarkers.map((m) => (
+        <div
+          key={m.id}
+          className="climax-proj-peak"
+          style={{
+            height: `${(m.intensity ?? 0) * 10}%`,
+            left: `${(m.seconds / total) * 100}%`,
+          }}
+        />
+      ))}
+      <div className="climax-proj-indicator" style={{ left: `${pos}%` }} />
+    </div>
+  );
+};
+
 const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
   location,
   history,
@@ -1082,9 +1159,15 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
     }
   }
 
-  const [afterglow, setAfterglow] = useState(
-    () => new URLSearchParams(location.search).get("afterglow") === "1"
-  );
+  const [afterglow, setAfterglow] = useState(() => {
+    const fromURL =
+      new URLSearchParams(location.search).get("afterglow") === "1";
+    if (fromURL) {
+      localStorage.setItem("stash.afterglow", "1");
+      return true;
+    }
+    return localStorage.getItem("stash.afterglow") === "1";
+  });
 
   // --- session recap tracking (afterglow mode) ---
   const SESSION_KEY = "stash.goonSession";
@@ -1097,6 +1180,7 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
       at: string;
     }[];
     oCount: number;
+    startedAt?: number;
   };
 
   const readSession = useCallback((): SessionLog | null => {
@@ -1122,6 +1206,12 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
     const session = readSession() ?? { entries: [], oCount: 0 };
     session.oCount = (session.oCount ?? 0) + 1;
     writeSession(session);
+
+    // ritual step complete: advance to the next scene shortly after
+    const advance = setTimeout(() => {
+      queueNextRef.current(true);
+    }, 1000);
+    return () => clearTimeout(advance);
   }, [afterglow, readSession, writeSession]);
 
   function toggleAfterglow() {
@@ -1130,10 +1220,35 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
       if (session && session.entries.length > 0) {
         setSessionRecap(session);
         localStorage.setItem("stash.achievement.firstSession", "1");
+
+        // accumulate session stats for the Pantheon
+        const started = session.startedAt ?? Date.now();
+        const minutes = Math.max(1, Math.round((Date.now() - started) / 60000));
+        try {
+          const raw = localStorage.getItem("stash.goonSessionStats");
+          const stats = raw
+            ? JSON.parse(raw)
+            : { totalMinutes: 0, maxMinutes: 0, sessions: 0 };
+          stats.totalMinutes = (stats.totalMinutes ?? 0) + minutes;
+          stats.maxMinutes = Math.max(stats.maxMinutes ?? 0, minutes);
+          stats.sessions = (stats.sessions ?? 0) + 1;
+          localStorage.setItem("stash.goonSessionStats", JSON.stringify(stats));
+        } catch {
+          // ignore stats failures
+        }
       }
       localStorage.removeItem(SESSION_KEY);
+      localStorage.setItem("stash.afterglow", "0");
       setAfterglow(false);
     } else {
+      const session = readSession() ?? {
+        entries: [],
+        oCount: 0,
+        startedAt: Date.now(),
+      };
+      session.startedAt = Date.now();
+      writeSession(session);
+      localStorage.setItem("stash.afterglow", "1");
       setAfterglow(true);
     }
   }
@@ -1197,6 +1312,12 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
     const t = setTimeout(() => {
       _pausePlayer.current();
       setEdgePaused(true);
+      try {
+        const n = Number(localStorage.getItem("stash.edgePauses") ?? "0") + 1;
+        localStorage.setItem("stash.edgePauses", String(n));
+      } catch {
+        // ignore counter failures
+      }
     }, delay);
     return () => clearTimeout(t);
   }, [edging, edgePaused, edgeInterval]);
@@ -1237,6 +1358,51 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
       setBlind(false);
     } else {
       startBlindGoon();
+    }
+  }
+
+  // --- transcend mode ---
+  const [transcend, setTranscend] = useState(false);
+  const transcendCount = useRef(0);
+  const [buildTranscend, { loading: transcendBuilding }] =
+    GQL.useAiSessionBuildLazyQuery();
+
+  // blind every third scene while transcending
+  useEffect(() => {
+    if (!transcend || !scene?.id) return;
+    transcendCount.current += 1;
+    setBlind(transcendCount.current % 3 === 0);
+  }, [transcend, scene?.id]);
+
+  async function onTranscend() {
+    try {
+      const result = await buildTranscend({
+        variables: {
+          input: {
+            duration_minutes: 60,
+            min_steam: 7,
+            ordering: "build_up",
+          },
+        },
+      });
+      const plan = result.data?.aiSessionBuild;
+      if (!plan || plan.scenes.length === 0) {
+        Toast.error(
+          intl.formatMessage({ id: "config.tasks.ai_session.empty" })
+        );
+        return;
+      }
+      setTranscend(true);
+      transcendCount.current = 0;
+      setEdging(true);
+      localStorage.setItem("stash.achievement.transcend", "1");
+      const params = plan.scenes
+        .map((s) => `qs=${s.scene_id}`)
+        .concat("afterglow=1", "autoplay=true")
+        .join("&");
+      history.push(`/scenes/${plan.scenes[0].scene_id}?${params}`);
+    } catch (e) {
+      Toast.error(e);
     }
   }
 
@@ -1363,6 +1529,16 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
             <Icon icon={faComments} />{" "}
             <FormattedMessage id="scene_roulette.chat" />
           </Button>
+          <WhoIsSheChip sceneId={scene?.id} />
+          <Button
+            variant={transcend ? "primary" : "outline-primary"}
+            className="ml-2"
+            onClick={() => onTranscend()}
+            disabled={transcendBuilding}
+          >
+            <Icon icon={faDove} />{" "}
+            <FormattedMessage id="scene_roulette.transcend" />
+          </Button>
           <Dropdown className="ml-2" id="vibe-radio-dropdown">
             <Dropdown.Toggle variant="outline-danger" size="sm">
               <Icon icon={faRadio} />{" "}
@@ -1409,6 +1585,7 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
             </Form.Control>
           )}
         </div>
+        <ClimaxProjection sceneId={scene?.id} active={afterglow} />
         <ScenePlayer
           key="ScenePlayer"
           scene={scene}

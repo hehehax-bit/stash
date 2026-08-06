@@ -277,6 +277,10 @@ type Query {
   aiSessionBuild(input: AISessionBuildInput!): AISessionPlan!
   "Saved scene markers, newest first."
   aiSavedMoments: [AISavedMoment!]!
+  "Saved session plans, newest first."
+  aiSavedPlans: [AISavedPlan!]!
+  "Parses a natural-language session request into build parameters."
+  aiSessionDescribe(text: String!): AISessionDescribeResult!
   "Logged O dates per day for the last N days."
   aiOHistoryTimeline(days: Int): [AIOHistoryTimelineEntry!]!
   "Performers ranked by the number of scenes you logged an O for."
@@ -584,6 +588,10 @@ type Mutation {
   aiSaveMoment(marker_id: ID!): Boolean!
   "Removes a scene marker from the saved moments"
   aiUnsaveMoment(marker_id: ID!): Boolean!
+  "Saves a session plan. Returns the plan ID"
+  aiSavePlan(name: String!, scene_ids: [ID!]!): ID!
+  "Deletes a saved session plan"
+  aiDeletePlan(plan_id: ID!): Boolean!
   "Applies all pending AI audit findings. Returns the number applied"
   aiAuditApplyAll: Int!
   "Rejects all pending AI audit findings. Returns the number rejected"

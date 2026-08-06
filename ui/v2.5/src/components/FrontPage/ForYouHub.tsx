@@ -12,6 +12,7 @@ import { Button } from "react-bootstrap";
 import { faCrown, faFire } from "@fortawesome/free-solid-svg-icons";
 import { AISessionBuildDialog } from "src/components/Dialogs/AISessionBuildDialog/AISessionBuildDialog";
 import { Achievements } from "./Achievements";
+import { ThroneProgress } from "./ThroneProgress";
 
 const PICK_COUNT = 6;
 
@@ -45,7 +46,7 @@ const TonightPicks: React.FC = () => {
       </h5>
       <div className="row">
         {scenes.map((s) => (
-          <div key={s.id} className="col-6 col-sm-4 col-md-3 col-xl-2">
+          <div key={s.id} className="col-6 col-sm-4 col-md-3 col-xl-2 mb-3">
             <SceneCard scene={s} />
           </div>
         ))}
@@ -69,7 +70,7 @@ const MoanerOfTheWeek: React.FC = () => {
         {entries.map((e, i) => (
           <div
             key={e.performer?.id}
-            className="col-6 col-sm-4 col-md-3 col-xl-2"
+            className="col-6 col-sm-4 col-md-3 col-xl-2 mb-3"
           >
             <Link
               to={`/performers/${e.performer?.id}`}
@@ -111,7 +112,7 @@ const RecentScenes: React.FC = () => {
       </h5>
       <div className="row">
         {scenes.map((s) => (
-          <div key={s.id} className="col-6 col-sm-4 col-md-3 col-xl-2">
+          <div key={s.id} className="col-6 col-sm-4 col-md-3 col-xl-2 mb-3">
             <SceneCard scene={s} />
           </div>
         ))}
@@ -137,6 +138,7 @@ export const ForYouHub: React.FC = () => {
           <FormattedMessage id="scoreboard.heading" />
         </Button>
       </div>
+      <ThroneProgress compact />
       <Achievements />
       <TonightPicks />
       <MoanerOfTheWeek />

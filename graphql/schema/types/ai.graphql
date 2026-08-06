@@ -568,3 +568,19 @@ type AIOHistoryTimelineEntry {
   date: String!
   count: Int!
 }
+
+type AISavedPlan {
+  id: ID!
+  name: String!
+  scene_ids: [ID!]!
+  created_at: Time!
+}
+
+"Parsed natural-language session request."
+type AISessionDescribeResult {
+  duration_minutes: Int!
+  moods: [String!]!
+  min_steam: Int!
+  vibe: String!
+  ordering: String!
+}

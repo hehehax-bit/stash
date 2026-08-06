@@ -1216,6 +1216,112 @@ func recommendScene(ctx context.Context, repo models.Repository, args json.RawMe
 	return b.String(), nil
 }
 
+func planSession(ctx context.Context, repo models.Repository, args json.RawMessage, cfg ToolConfig) (string, error) {
+	var params struct {
+		Request string `json:"request"`
+	}
+	if err := json.Unmarshal(args, &params); err != nil {
+		return "", fmt.Errorf("invalid args: %w", err)
+	}
+	params.Request = strings.TrimSpace(params.Request)
+	if params.Request == "" {
+		return "", fmt.Errorf("request is required — describe the session you want")
+	}
+	if cfg.LLMBaseURL == "" || cfg.LLMModel == "" {
+		return "AI is not configured.", nil
+	}
+
+	client := NewClient(cfg.LLMBaseURL, cfg.LLMModel)
+	intent, err := ParseSessionIntent(ctx, client, params.Request)
+	if err != nil {
+		return "", fmt.Errorf("parsing session request: %w", err)
+	}
+
+	minSteam := intent.MinSteam
+	if minSteam <= 0 {
+		minSteam = 6
+	}
+
+	filter := &models.SceneFilterType{
+		SteamScore: &models.IntCriterionInput{
+			Value:    minSteam,
+			Modifier: models.CriterionModifierGreaterThan,
+		},
+	}
+	if len(intent.Moods) > 0 {
+		filter.Moods = &models.MultiCriterionInput{
+			Value:    intent.Moods,
+			Modifier: models.CriterionModifierIncludes,
+		}
+	}
+
+	perPage := -1
+	result, err := repo.Scene.Query(ctx, models.SceneQueryOptions{
+		SceneFilter: filter,
+		QueryOptions: models.QueryOptions{
+			FindFilter: &models.FindFilterType{PerPage: &perPage},
+		},
+	})
+	if err != nil {
+		return "", fmt.Errorf("querying scenes: %w", err)
+	}
+	scenes, err := result.Resolve(ctx)
+	if err != nil {
+		return "", fmt.Errorf("resolving scenes: %w", err)
+	}
+	if len(scenes) == 0 {
+		return "No scenes match the request. Try lowering the steam requirement or adding moods.", nil
+	}
+
+	ids := make([]int, len(scenes))
+	for i, sc := range scenes {
+		ids[i] = sc.ID
+	}
+	steamScores, err := repo.Scene.GetSteamScores(ctx, ids)
+	if err != nil {
+		return "", fmt.Errorf("loading steam scores: %w", err)
+	}
+
+	// sort by steam (ascending for build-up, descending otherwise)
+	sort.Slice(scenes, func(i, j int) bool {
+		si, sj := steamScores[scenes[i].ID], steamScores[scenes[j].ID]
+		if intent.Ordering == "build_up" {
+			return si < sj
+		}
+		return si > sj
+	})
+
+	// pack up to the duration budget
+	budget := float64(intent.DurationMinutes) * 60
+	var b strings.Builder
+	fmt.Fprintf(&b, "Session plan (~%d min, %d scenes):\n\n", intent.DurationMinutes, len(scenes))
+	total := 0.0
+	for _, sc := range scenes {
+		if total >= budget {
+			break
+		}
+		duration := 60.0
+		_ = sc.LoadPrimaryFile(ctx, repo.File)
+		if f := sc.Files.Primary(); f != nil && f.Duration > 0 {
+			duration = f.Duration
+		}
+		contrib := duration
+		if contrib > 120 {
+			contrib = 120
+		}
+		if total+contrib > budget && total > 0 {
+			continue
+		}
+		fmt.Fprintf(&b, "- [Scene #%d - %s](/scenes/%d) | steam %d | %.0fs\n", sc.ID, sc.Title, sc.ID, steamScores[sc.ID], duration)
+		total += contrib
+	}
+	if total == 0 {
+		return "No scenes fit the budget.", nil
+	}
+	b.WriteString("\nTell the user the plan is ready and that they can press Build a Session with these settings, or ask you to adjust.")
+	return b.String(), nil
+}
+
 func searchSemantic(ctx context.Context, repo models.Repository, args json.RawMessage, cfg ToolConfig) (string, error) {
 	var params struct {
 		Query string `json:"query"`
@@ -1768,6 +1874,23 @@ func GetTools(cfg ToolConfig) []Tool {
 			Parameters:  searchSimilarScenesParam,
 			Execute: func(ctx context.Context, repo models.Repository, args json.RawMessage) (string, error) {
 				return searchSimilarScenes(ctx, repo, args, cfg)
+			},
+		},
+		{
+			Name:        "plan_session",
+			Description: "Plan a goon session from a natural-language request (e.g. \"40 minutes, sensual then rough, ending intense\"). Parses duration, moods, ordering, and steam floor, then lists matching scenes. Use this when the user asks to plan or build a session.",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"request": map[string]interface{}{
+						"type":        "string",
+						"description": "The user's session request in their own words.",
+					},
+				},
+				"required": []string{"request"},
+			},
+			Execute: func(ctx context.Context, repo models.Repository, args json.RawMessage) (string, error) {
+				return planSession(ctx, repo, args, cfg)
 			},
 		},
 		{

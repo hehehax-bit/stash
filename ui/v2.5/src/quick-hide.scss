@@ -24,3 +24,14 @@
     filter: saturate(1.15);
   }
 }
+
+// night chapel: a warm, dim candlelight theme.
+// .night-chapel and .main are applied to the same element, so the
+// selectors chain classes instead of using a descendant.
+.night-chapel.main {
+  filter: brightness(0.92) sepia(0.18) saturate(1.05);
+}
+
+.goon-mode.night-chapel.main {
+  filter: brightness(0.86) sepia(0.3) saturate(1.1);
+}

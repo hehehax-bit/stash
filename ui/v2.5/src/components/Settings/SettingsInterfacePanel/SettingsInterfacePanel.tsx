@@ -418,6 +418,13 @@ export const SettingsInterfacePanel: React.FC = PatchComponent(
             onChange={(v) => saveUI({ quickHide: v })}
           />
           <BooleanSetting
+            id="night-chapel"
+            headingID="config.ui.night_chapel"
+            subHeadingID="config.ui.night_chapel_description"
+            checked={ui.nightChapel ?? false}
+            onChange={(v) => saveUI({ nightChapel: v })}
+          />
+          <BooleanSetting
             id="goon-mode"
             headingID="config.ui.goon_mode"
             subHeadingID="config.ui.goon_mode_description"

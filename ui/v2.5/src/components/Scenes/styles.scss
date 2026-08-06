@@ -1099,3 +1099,28 @@ input[type="range"].blue-slider {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.climax-projection {
+  background-color: rgba(0, 0, 0, 0.4);
+  border-radius: 0.25rem;
+  height: 22px;
+  margin: 0.25rem 0;
+  position: relative;
+}
+
+.climax-proj-peak {
+  background: linear-gradient(to top, #ff5722, #ff9800);
+  border-radius: 2px 2px 0 0;
+  bottom: 0;
+  position: absolute;
+  width: 4px;
+}
+
+.climax-proj-indicator {
+  background-color: $white;
+  bottom: 0;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
+  position: absolute;
+  top: 0;
+  width: 2px;
+}

@@ -130,6 +130,12 @@ const MainContainer: React.FC = ({ children }) => {
   );
 
   useEffect(() => {
+    if (configuration?.ui?.nightChapel) {
+      localStorage.setItem("stash.achievement.nightChapel", "1");
+    }
+  }, [configuration?.ui?.nightChapel]);
+
+  useEffect(() => {
     Mousetrap.bind("h", () => setQuickHide((q) => !q));
     Mousetrap.bind("g", () => setGoonMode((g) => !g));
     return () => {
@@ -146,6 +152,7 @@ const MainContainer: React.FC = ({ children }) => {
           "sfw-content-mode": sfwContentMode,
           "quick-hide": quickHide,
           "goon-mode": goonMode,
+          "night-chapel": configuration?.ui?.nightChapel ?? false,
         })}
       >
         {children}
