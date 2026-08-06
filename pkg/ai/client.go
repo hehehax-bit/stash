@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/disintegration/imaging"
 )
 
 type Client struct {
@@ -655,6 +658,7 @@ func (c *Client) MultiVisionCompletion(ctx context.Context, systemPrompt string,
 		{Type: "text", Text: userText},
 	}
 	for _, img := range images {
+		img = normalizeVisionImagePart(img)
 		contentParts = append(contentParts, ContentPart{
 			Type:     "image_url",
 			ImageURL: &ImageURL{URL: "data:" + img.MediaType + ";base64," + img.Base64},
@@ -687,6 +691,56 @@ func (c *Client) MultiVisionCompletion(ctx context.Context, systemPrompt string,
 	}
 
 	return content, nil
+}
+
+// maxVisionImageDimension is the maximum image dimension sent to vision
+// servers. Larger images are downscaled to keep request bodies within the
+// upload limits of common servers (e.g. LocalAI's ~12 MB cap).
+const maxVisionImageDimension = 1280
+
+// normalizeVisionImagePart decodes, downscales and re-encodes a base64 image
+// part so that vision requests stay small. Images that cannot be decoded are
+// passed through unchanged.
+func normalizeVisionImagePart(img MultiImage) MultiImage {
+	if img.Base64 == "" {
+		return img
+	}
+
+	data, err := base64.StdEncoding.DecodeString(img.Base64)
+	if err != nil {
+		return img
+	}
+
+	normalized, mediaType := normalizeVisionImage(data)
+	if normalized == nil {
+		return img
+	}
+
+	img.Base64 = base64.StdEncoding.EncodeToString(normalized)
+	img.MediaType = mediaType
+	return img
+}
+
+// normalizeVisionImage decodes the image and re-encodes it as a JPEG,
+// downscaled to at most maxVisionImageDimension on the long side. It returns
+// (nil, "") for unsupported or corrupt images so callers can pass them through
+// unchanged.
+func normalizeVisionImage(data []byte) ([]byte, string) {
+	img, err := imaging.Decode(bytes.NewReader(data), imaging.AutoOrientation(true))
+	if err != nil {
+		return nil, ""
+	}
+
+	bounds := img.Bounds()
+	if bounds.Dx() > maxVisionImageDimension || bounds.Dy() > maxVisionImageDimension {
+		img = imaging.Fit(img, maxVisionImageDimension, maxVisionImageDimension, imaging.Lanczos)
+	}
+
+	var buf bytes.Buffer
+	if err := imaging.Encode(&buf, img, imaging.JPEG, imaging.EncodeOption(imaging.JPEGQuality(85))); err != nil {
+		return nil, ""
+	}
+	return buf.Bytes(), "image/jpeg"
 }
 
 // normalizeSegmentTime converts a transcription segment timestamp to seconds.

@@ -81,16 +81,19 @@ export const AIFileRenameReviewDialog: React.FC<
 
   const renames = data?.aiFileRenames ?? [];
 
+  // refresh while the dialog is open so renames appear during a running job
+  useEffect(() => {
+    const timer = setInterval(() => refetch(), 10000);
+    return () => clearInterval(timer);
+  }, [refetch]);
+
   return (
     <ModalComponent
       show
+      onHide={onClose}
       icon={faFileSignature}
       header={intl.formatMessage({ id: "config.tasks.ai_file_rename.heading" })}
-      cancel={{
-        onClick: () => onClose(),
-        text: intl.formatMessage({ id: "actions.close" }),
-        variant: "secondary",
-      }}
+      dialogClassName="modal-xl"
     >
       <Form>
         <Form.Group className="mb-3">

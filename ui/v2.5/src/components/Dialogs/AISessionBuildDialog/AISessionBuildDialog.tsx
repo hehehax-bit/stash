@@ -4,6 +4,7 @@ import { useHistory } from "react-router-dom";
 import * as GQL from "src/core/generated-graphql";
 import { ModalComponent } from "src/components/Shared/Modal";
 import { LoadingIndicator } from "src/components/Shared/LoadingIndicator";
+import { Icon } from "src/components/Shared/Icon";
 import { PerformerIDSelect } from "src/components/Performers/PerformerSelect";
 import { useToast } from "src/hooks/Toast";
 import {
@@ -12,23 +13,34 @@ import {
   mutateAiDeletePlan,
 } from "src/core/StashService";
 import { FormattedMessage, useIntl } from "react-intl";
-import { faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
+import {
+  faCalendarAlt,
+  faWandMagicSparkles,
+} from "@fortawesome/free-solid-svg-icons";
 
 interface IAISessionBuildDialogProps {
   onClose: () => void;
+  initial?: {
+    durationMinutes?: number;
+    minSteam?: number;
+    ordering?: string;
+  };
+  onStart?: () => void;
 }
 
 export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
   onClose,
+  initial,
+  onStart,
 }) => {
   const intl = useIntl();
   const Toast = useToast();
   const history = useHistory();
 
-  const [duration, setDuration] = useState(30);
-  const [minSteam, setMinSteam] = useState(6);
+  const [duration, setDuration] = useState(initial?.durationMinutes ?? 30);
+  const [minSteam, setMinSteam] = useState(initial?.minSteam ?? 6);
   const [vibe, setVibe] = useState("");
-  const [ordering, setOrdering] = useState("");
+  const [ordering, setOrdering] = useState(initial?.ordering ?? "");
   const [ritualMode, setRitualMode] = useState(false);
   const [ritualMoods, setRitualMoods] = useState<string[]>([]);
   const [performerIds, setPerformerIds] = useState<string[]>([]);
@@ -43,25 +55,77 @@ export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
     GQL.useAiSessionDescribeLazyQuery();
 
   const [describeText, setDescribeText] = useState("");
+  const [oracleSummary, setOracleSummary] = useState<string | null>(null);
 
   async function onDescribe() {
     if (describeText.trim() === "") return;
     try {
+      const before = {
+        duration,
+        minSteam,
+        moods: [...moods],
+        ordering,
+        vibe,
+      };
       const result = await describeSession({
         variables: { text: describeText },
       });
       const d = result.data?.aiSessionDescribe;
       if (d) {
+        // summarize what the oracle changed so nothing is silently overwritten
+        const changes: string[] = [];
+        if (d.duration_minutes && d.duration_minutes !== before.duration) {
+          changes.push(
+            `${intl.formatMessage({ id: "config.tasks.ai_session.duration" })} ${before.duration} → ${d.duration_minutes}`
+          );
+        }
+        if (d.min_steam && d.min_steam !== before.minSteam) {
+          changes.push(
+            `${intl.formatMessage({ id: "config.tasks.ai_session.min_steam" })} ${before.minSteam} → ${d.min_steam}`
+          );
+        }
+        const newMoods = d.moods ?? [];
+        if (newMoods.join(",") !== before.moods.join(",")) {
+          changes.push(
+            `${intl.formatMessage({ id: "config.tasks.ai_session.moods" })}: ${newMoods.join(", ")}`
+          );
+        }
+        if (d.ordering && d.ordering !== before.ordering) {
+          changes.push(
+            `${intl.formatMessage({ id: "config.tasks.ai_session.ordering" })}: ${d.ordering}`
+          );
+        }
+        if (d.vibe && d.vibe !== before.vibe) {
+          changes.push(`"${d.vibe}"`);
+        }
+        setOracleSummary(
+          changes.length > 0
+            ? `${intl.formatMessage({ id: "config.tasks.ai_session.oracle_changed" })} ${changes.join(" · ")}`
+            : intl.formatMessage({
+                id: "config.tasks.ai_session.oracle_no_change",
+              })
+        );
+
         setDuration(d.duration_minutes || 30);
         setMinSteam(d.min_steam || 6);
-        setMoods(d.moods ?? []);
-        setRitualMoods(d.moods ?? []);
+        setMoods(newMoods);
+        setRitualMoods(newMoods);
         setOrdering(d.ordering ?? "");
         setVibe(d.vibe ?? "");
       }
     } catch (e) {
       Toast.error(e);
     }
+  }
+
+  function moveRitual(index: number, delta: number) {
+    setRitualMoods((prev) => {
+      const target = index + delta;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   }
 
   async function onBuild() {
@@ -137,6 +201,15 @@ export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
   }
 
   async function onDeletePlan(planId: string) {
+    if (
+      !window.confirm(
+        intl.formatMessage({
+          id: "config.tasks.ai_session.delete_plan_confirm",
+        })
+      )
+    ) {
+      return;
+    }
     try {
       await mutateAiDeletePlan(planId);
       refetchPlans();
@@ -148,6 +221,8 @@ export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
   function startSession() {
     if (!plan || plan.scenes.length === 0) return;
 
+    onStart?.();
+
     const params = plan.scenes
       .map((s) => `qs=${s.scene_id}`)
       .concat("afterglow=1")
@@ -157,18 +232,20 @@ export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
     onClose();
   }
 
+  const savedPlans = savedPlansData?.aiSavedPlans ?? [];
+
   return (
     <ModalComponent
       show
+      onHide={onClose}
       icon={faCalendarAlt}
       header={intl.formatMessage({ id: "config.tasks.ai_session.heading" })}
-      cancel={{
-        onClick: () => onClose(),
-        text: intl.formatMessage({ id: "actions.close" }),
-        variant: "secondary",
-      }}
+      dialogClassName="modal-lg"
     >
       <Form>
+        <h6 className="ai-session-section-title">
+          <FormattedMessage id="config.tasks.ai_session.section_configure" />
+        </h6>
         <Form.Group>
           <Form.Label>
             <FormattedMessage id="config.tasks.ai_session.duration" />:{" "}
@@ -250,10 +327,36 @@ export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
             ))}
           </div>
           {ritualMode && ritualMoods.length > 0 && (
-            <Form.Text className="text-muted">
-              <FormattedMessage id="config.tasks.ai_session.ritual_order" />:{" "}
-              {ritualMoods.join(" → ")}
-            </Form.Text>
+            <div className="ritual-order-list mt-2">
+              <Form.Text className="text-muted">
+                <FormattedMessage id="config.tasks.ai_session.ritual_order" />
+              </Form.Text>
+              {ritualMoods.map((m, i) => (
+                <div key={m} className="ritual-order-item">
+                  <span>
+                    {i + 1}. {m}
+                  </span>
+                  <span className="ritual-order-actions">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary"
+                      disabled={i === 0}
+                      onClick={() => moveRitual(i, -1)}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary ml-1"
+                      disabled={i === ritualMoods.length - 1}
+                      onClick={() => moveRitual(i, 1)}
+                    >
+                      ↓
+                    </button>
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
         </Form.Group>
 
@@ -304,10 +407,11 @@ export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
           />
         </Form.Group>
 
+        <h6 className="ai-session-section-title">
+          <Icon icon={faWandMagicSparkles} />{" "}
+          <FormattedMessage id="config.tasks.ai_session.section_oracle" />
+        </h6>
         <Form.Group>
-          <Form.Label>
-            <FormattedMessage id="config.tasks.ai_session.describe" />
-          </Form.Label>
           <Form.Control
             type="text"
             value={describeText}
@@ -327,6 +431,11 @@ export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
           >
             {describing ? "…" : "✨ Oracle"}
           </Button>
+          {oracleSummary && (
+            <Form.Text className="text-muted mt-2 ai-session-oracle-summary">
+              {oracleSummary}
+            </Form.Text>
+          )}
         </Form.Group>
 
         <Button variant="primary" onClick={() => onBuild()} disabled={loading}>
@@ -340,8 +449,8 @@ export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
 
       {plan && plan.scenes.length > 0 && (
         <div className="mt-3">
-          <h6>
-            <FormattedMessage id="config.tasks.ai_session.plan" />:{" "}
+          <h6 className="ai-session-section-title">
+            <FormattedMessage id="config.tasks.ai_session.section_plan" />:{" "}
             {Math.round(plan.total_minutes)} min · {plan.scenes.length} scenes
           </h6>
           <ul className="ai-session-preview">
@@ -356,58 +465,67 @@ export const AISessionBuildDialog: React.FC<IAISessionBuildDialogProps> = ({
               </li>
             ))}
           </ul>
-          <Button variant="danger" onClick={() => startSession()}>
-            <FormattedMessage id="config.tasks.ai_session.start" />
-          </Button>{" "}
-          <Button variant="outline-danger" onClick={() => onGenerateReel()}>
-            <FormattedMessage id="config.tasks.ai_session.reel" />
-          </Button>{" "}
-          <Form.Control
-            type="text"
-            className="ai-session-plan-name"
-            placeholder={intl.formatMessage({
-              id: "config.tasks.ai_session.plan_name",
-            })}
-            value={planName}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setPlanName(e.currentTarget.value)
-            }
-          />
-          <Button
-            variant="outline-secondary"
-            onClick={() => onSavePlan()}
-            disabled={planName.trim() === ""}
-          >
-            <FormattedMessage id="config.tasks.ai_session.save_plan" />
-          </Button>
-          {(savedPlansData?.aiSavedPlans ?? []).length > 0 && (
-            <div className="mt-2">
-              <FormattedMessage id="config.tasks.ai_session.saved_plans" />:
-              <ul className="mb-0">
-                {(savedPlansData?.aiSavedPlans ?? []).map((p) => (
-                  <li key={p.id}>
-                    <Button
-                      size="sm"
-                      variant="link"
-                      onClick={() => playPlan(p.scene_ids)}
-                    >
-                      ▶ {p.name}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="link"
-                      className="text-danger"
-                      onClick={() => onDeletePlan(p.id)}
-                    >
-                      ✕
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <div className="d-flex flex-wrap gap-2 align-items-center">
+            <Button variant="danger" onClick={() => startSession()}>
+              <FormattedMessage id="config.tasks.ai_session.start" />
+            </Button>
+            <Button variant="outline-danger" onClick={() => onGenerateReel()}>
+              <FormattedMessage id="config.tasks.ai_session.reel" />
+            </Button>
+            <Form.Control
+              type="text"
+              className="ai-session-plan-name"
+              placeholder={intl.formatMessage({
+                id: "config.tasks.ai_session.plan_name",
+              })}
+              value={planName}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setPlanName(e.currentTarget.value)
+              }
+            />
+            <Button
+              variant="outline-secondary"
+              onClick={() => onSavePlan()}
+              disabled={planName.trim() === ""}
+            >
+              <FormattedMessage id="config.tasks.ai_session.save_plan" />
+            </Button>
+          </div>
         </div>
       )}
+
+      <div className="mt-3">
+        <h6 className="ai-session-section-title">
+          <FormattedMessage id="config.tasks.ai_session.saved_plans" />
+        </h6>
+        {savedPlans.length === 0 ? (
+          <div className="text-muted small">
+            <FormattedMessage id="config.tasks.ai_session.no_saved_plans" />
+          </div>
+        ) : (
+          <ul className="mb-0">
+            {savedPlans.map((p) => (
+              <li key={p.id} className="ai-session-saved-plan">
+                <Button
+                  size="sm"
+                  variant="link"
+                  onClick={() => playPlan(p.scene_ids)}
+                >
+                  ▶ {p.name}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="link"
+                  className="text-danger"
+                  onClick={() => onDeletePlan(p.id)}
+                >
+                  ✕
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </ModalComponent>
   );
 };

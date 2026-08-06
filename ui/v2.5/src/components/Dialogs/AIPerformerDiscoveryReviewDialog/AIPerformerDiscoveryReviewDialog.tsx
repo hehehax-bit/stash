@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button, Form } from "react-bootstrap";
 import * as GQL from "src/core/generated-graphql";
 import { ModalComponent } from "src/components/Shared/Modal";
@@ -31,6 +31,12 @@ export const AIPerformerDiscoveryReviewDialog: React.FC<
   const [rejectAll] = GQL.useAiPerformerCandidateRejectAllMutation();
 
   const candidates = data?.aiPerformerCandidates ?? [];
+
+  // refresh while the dialog is open so candidates appear during a running job
+  useEffect(() => {
+    const timer = setInterval(() => refetch(), 10000);
+    return () => clearInterval(timer);
+  }, [refetch]);
 
   async function onCreate(id: string) {
     try {
@@ -109,15 +115,12 @@ export const AIPerformerDiscoveryReviewDialog: React.FC<
   return (
     <ModalComponent
       show
+      onHide={onClose}
       icon={faUserPlus}
       header={intl.formatMessage({
         id: "config.tasks.ai_performer_discovery.review",
       })}
-      cancel={{
-        onClick: () => onClose(),
-        text: intl.formatMessage({ id: "actions.close" }),
-        variant: "secondary",
-      }}
+      dialogClassName="modal-xl"
     >
       <Form.Group>
         <Form.Control
@@ -163,8 +166,8 @@ export const AIPerformerDiscoveryReviewDialog: React.FC<
 
       {candidates.map((c) => (
         <div key={c.id} className="row mb-3 align-items-center">
-          <div className="col-3">{entityPreview(c)}</div>
-          <div className="col-5">
+          <div className="col-4">{entityPreview(c)}</div>
+          <div className="col-4">
             <div>
               <strong>{c.name}</strong>{" "}
               <span className="text-muted">({c.member_count} appearances)</span>

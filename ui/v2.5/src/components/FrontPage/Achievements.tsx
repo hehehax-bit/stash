@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
+import { Link } from "react-router-dom";
 import * as GQL from "src/core/generated-graphql";
 import { useStats } from "src/core/StashService";
 
@@ -110,6 +111,9 @@ export const Achievements: React.FC = () => {
   );
   const total = FAMILIES.reduce((sum, f) => sum + f.tiers.length, 0);
 
+  const [showAll, setShowAll] = useState(false);
+  const visibleFamilies = showAll ? FAMILIES : FAMILIES.slice(0, 6);
+
   return (
     <div className="for-you-row achievements">
       <h5>
@@ -119,7 +123,7 @@ export const Achievements: React.FC = () => {
         </span>
       </h5>
       <div className="row">
-        {FAMILIES.map((f) => {
+        {visibleFamilies.map((f) => {
           const value = values[f.id];
           const reached = f.tiers.filter((t) => value >= t).length;
           const nextTier = f.tiers[reached];
@@ -133,10 +137,24 @@ export const Achievements: React.FC = () => {
               className="col-6 col-sm-4 col-md-3 col-lg-2 achievement"
             >
               <div className="achievement-name">
-                {reached > 0
-                  ? TIER_PIPS[Math.min(reached - 1, TIER_PIPS.length - 1)]
-                  : "🔒"}{" "}
-                <FormattedMessage id={f.messageID} />
+                <span
+                  title={
+                    nextTier
+                      ? `Next tier: ${nextTier}`
+                      : `All tiers reached: ${f.tiers.join(", ")}`
+                  }
+                >
+                  {reached > 0
+                    ? TIER_PIPS[Math.min(reached - 1, TIER_PIPS.length - 1)]
+                    : "🔒"}{" "}
+                </span>
+                {f.id === "saved" ? (
+                  <Link to="/saved">
+                    <FormattedMessage id={f.messageID} />
+                  </Link>
+                ) : (
+                  <FormattedMessage id={f.messageID} />
+                )}
               </div>
               <div className="progress mt-1">
                 <div
@@ -145,12 +163,24 @@ export const Achievements: React.FC = () => {
                   style={{ width: `${pct}%` }}
                 />
               </div>
-              <div className="small text-muted">
+              <div className="small text-muted mt-1 achievement-counter">
                 {nextTier ? `${value}/${nextTier}` : `${value} · max`}
               </div>
             </div>
           );
         })}
+      </div>
+      <div className="text-center">
+        <button
+          className="btn btn-sm btn-link"
+          onClick={() => setShowAll(!showAll)}
+        >
+          {showAll ? (
+            <FormattedMessage id="achievements.show_less" />
+          ) : (
+            <FormattedMessage id="achievements.show_more" />
+          )}
+        </button>
       </div>
     </div>
   );

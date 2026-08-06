@@ -31,11 +31,6 @@ export const FeaturesModal: React.FC<{ onClose: () => void }> = ({
       header={intl.formatMessage({ id: "features.heading" })}
       dialogClassName="modal-xl"
       onHide={onClose}
-      cancel={{
-        onClick: onClose,
-        text: intl.formatMessage({ id: "actions.close" }),
-        variant: "secondary",
-      }}
     >
       <Form.Group>
         <Form.Control

@@ -101,20 +101,39 @@ func (j *AIAudioAnalyzeJob) Execute(ctx context.Context, progress *job.Progress)
 			}
 		}
 
+		explicit := len(j.input.SceneIDs) > 0
+		analyzed := 0
+		skipped := 0
+
 		j.progress.SetTotal(len(scenes))
 		for _, s := range scenes {
 			if job.IsCancelled(ctx) {
 				return nil
 			}
 			if skip[s.ID] {
-				j.progress.Increment()
-				continue
+				// only skip if the existing assessment is complete relative to
+				// the current configuration (e.g. re-analyze scenes that were
+				// assessed before transcription was configured)
+				complete, err := j.assessmentComplete(ctx, r, s.ID)
+				if err == nil && complete {
+					if explicit {
+						logger.Infof("Skipping scene %d: already assessed", s.ID)
+					}
+					skipped++
+					j.progress.Increment()
+					continue
+				}
 			}
 
+			analyzed++
 			j.progress.ExecuteTask("AI analyzing audio of "+s.Path, func() {
 				j.analyzeScene(ctx, chatClient, r, s)
 			})
 			j.progress.Increment()
+		}
+
+		if explicit && analyzed == 0 && skipped > 0 {
+			return fmt.Errorf("no scenes were analyzed: all %d selected scene(s) already assessed (enable Overwrite to re-analyze)", skipped)
 		}
 
 		return nil
@@ -206,6 +225,28 @@ func (j *AIAudioAnalyzeJob) analyzeScene(ctx context.Context, chatClient *ai.Cli
 	}); err != nil {
 		logger.Errorf("Error saving audio analysis for scene %d: %v", s.ID, err)
 	}
+}
+
+// assessmentComplete reports whether the existing audio analysis for a scene
+// satisfies the current configuration. Scenes without an audio stream are
+// complete (nothing more can be extracted). When a transcription server is
+// configured, an assessment without a transcript is considered incomplete so
+// it can be re-analyzed.
+func (j *AIAudioAnalyzeJob) assessmentComplete(ctx context.Context, r models.Repository, sceneID int) (bool, error) {
+	audio, err := r.AISceneAudio.FindBySceneID(ctx, sceneID)
+	if err != nil || audio == nil {
+		return false, err
+	}
+
+	if !audio.HasAudio {
+		return true, nil
+	}
+
+	if config.GetInstance().GetAITranscriptionBaseURL() != "" {
+		return strings.TrimSpace(audio.Transcript) != "", nil
+	}
+
+	return true, nil
 }
 
 func (j *AIAudioAnalyzeJob) extractAudio(ctx context.Context, videoPath string, outPath string) error {

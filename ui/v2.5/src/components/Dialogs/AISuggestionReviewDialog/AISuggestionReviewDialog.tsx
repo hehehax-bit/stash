@@ -78,16 +78,19 @@ export const AISuggestionReviewDialog: React.FC<
 
   const suggestions = data?.aiSuggestions ?? [];
 
+  // refresh while the dialog is open so suggestions appear during a running job
+  useEffect(() => {
+    const timer = setInterval(() => refetch(), 10000);
+    return () => clearInterval(timer);
+  }, [refetch]);
+
   return (
     <ModalComponent
       show
+      onHide={onClose}
       icon={faWandMagicSparkles}
       header={intl.formatMessage({ id: "config.tasks.ai_suggestion.heading" })}
-      cancel={{
-        onClick: () => onClose(),
-        text: intl.formatMessage({ id: "actions.close" }),
-        variant: "secondary",
-      }}
+      dialogClassName="modal-xl"
     >
       <Form>
         <Form.Row className="mb-3">

@@ -132,10 +132,21 @@ export const ForYouHub: React.FC = () => {
         </Button>
         <Button
           variant="outline-warning"
-          className="ml-2"
           onClick={() => history.push("/scoreboard")}
         >
           <FormattedMessage id="scoreboard.heading" />
+        </Button>
+        <Button
+          variant="outline-primary"
+          onClick={() => history.push("/aiChat")}
+        >
+          <FormattedMessage id="scene_roulette.chat" />
+        </Button>
+        <Button
+          variant="outline-secondary"
+          onClick={() => history.push("/saved")}
+        >
+          <FormattedMessage id="saved_moments.heading" />
         </Button>
       </div>
       <ThroneProgress compact />

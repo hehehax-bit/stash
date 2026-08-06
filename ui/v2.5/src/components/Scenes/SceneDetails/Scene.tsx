@@ -23,6 +23,7 @@ import {
   useSceneIncrementPlayCount,
 } from "src/core/StashService";
 import { ModalComponent } from "src/components/Shared/Modal";
+import { AISessionBuildDialog } from "src/components/Dialogs/AISessionBuildDialog/AISessionBuildDialog";
 
 import { SceneEditPanel } from "./SceneEditPanel";
 import { ErrorMessage } from "src/components/Shared/ErrorMessage";
@@ -56,6 +57,8 @@ import {
   faRadio,
   faComments,
   faDove,
+  faClock,
+  faHeart,
 } from "@fortawesome/free-solid-svg-icons";
 import { objectPath, objectTitle } from "src/core/files";
 import { RatingSystem } from "src/components/Shared/Rating/RatingSystem";
@@ -320,7 +323,7 @@ const ScenePage: React.FC<IProps> = PatchComponent("ScenePage", (props) => {
     Mousetrap.bind("e", () => setActiveTabKey("scene-edit-panel"));
     Mousetrap.bind("k", () => setActiveTabKey("scene-markers-panel"));
     Mousetrap.bind("i", () => setActiveTabKey("scene-file-info-panel"));
-    Mousetrap.bind("h", () => setActiveTabKey("scene-history-panel"));
+    // note: "h" is used globally for quick-hide; the history tab has no keybind
     Mousetrap.bind("o", () => {
       onIncrementOClick();
     });
@@ -1198,6 +1201,19 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
 
   const [sessionRecap, setSessionRecap] = useState<SessionLog | null>(null);
 
+  // ticking clock for the session status strip while a session runs
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!afterglow) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [afterglow]);
+
+  const sessionLog = afterglow ? readSession() : null;
+  const elapsedSecs = sessionLog?.startedAt
+    ? Math.max(0, Math.floor((now - sessionLog.startedAt) / 1000))
+    : 0;
+
   const sceneRef = useRef(scene);
   sceneRef.current = scene;
 
@@ -1363,47 +1379,24 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
 
   // --- transcend mode ---
   const [transcend, setTranscend] = useState(false);
+  const [showSessionBuild, setShowSessionBuild] = useState(false);
+  const [transcendPending, setTranscendPending] = useState(false);
   const transcendCount = useRef(0);
-  const [buildTranscend, { loading: transcendBuilding }] =
-    GQL.useAiSessionBuildLazyQuery();
+  const [transcendScene, setTranscendScene] = useState(0);
 
   // blind every third scene while transcending
   useEffect(() => {
     if (!transcend || !scene?.id) return;
     transcendCount.current += 1;
+    setTranscendScene(transcendCount.current);
     setBlind(transcendCount.current % 3 === 0);
   }, [transcend, scene?.id]);
 
-  async function onTranscend() {
-    try {
-      const result = await buildTranscend({
-        variables: {
-          input: {
-            duration_minutes: 60,
-            min_steam: 7,
-            ordering: "build_up",
-          },
-        },
-      });
-      const plan = result.data?.aiSessionBuild;
-      if (!plan || plan.scenes.length === 0) {
-        Toast.error(
-          intl.formatMessage({ id: "config.tasks.ai_session.empty" })
-        );
-        return;
-      }
-      setTranscend(true);
-      transcendCount.current = 0;
-      setEdging(true);
-      localStorage.setItem("stash.achievement.transcend", "1");
-      const params = plan.scenes
-        .map((s) => `qs=${s.scene_id}`)
-        .concat("afterglow=1", "autoplay=true")
-        .join("&");
-      history.push(`/scenes/${plan.scenes[0].scene_id}?${params}`);
-    } catch (e) {
-      Toast.error(e);
-    }
+  function onTranscend() {
+    // open the session builder pre-filled for a transcend session; the
+    // transcend mode itself activates when the built plan is started
+    setTranscendPending(true);
+    setShowSessionBuild(true);
   }
 
   // --- vibe radio ---
@@ -1498,78 +1491,42 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
         }`}
       >
         <div className="scene-roulette-bar">
-          <Button
-            variant="danger"
-            onClick={() => queueRandom(autoPlayOnSelected)}
-          >
-            <Icon icon={faDice} />{" "}
-            <FormattedMessage id="scene_roulette.button" />
-          </Button>
-          <Button
-            variant={afterglow ? "primary" : "outline-primary"}
-            className="ml-2"
-            onClick={() => toggleAfterglow()}
-          >
-            <Icon icon={faBolt} />{" "}
-            <FormattedMessage id="scene_roulette.afterglow" />
-          </Button>
-          <Button
-            variant={blind ? "dark" : "outline-dark"}
-            className="ml-2"
-            onClick={() => toggleBlind()}
-          >
-            <Icon icon={faEyeSlash} />{" "}
-            <FormattedMessage id="scene_roulette.blind" />
-          </Button>
-          <Button
-            variant="outline-info"
-            className="ml-2"
-            onClick={() => history.push(`/aiChat?watching=${scene?.id ?? ""}`)}
-          >
-            <Icon icon={faComments} />{" "}
-            <FormattedMessage id="scene_roulette.chat" />
-          </Button>
-          <WhoIsSheChip sceneId={scene?.id} />
-          <Button
-            variant={transcend ? "primary" : "outline-primary"}
-            className="ml-2"
-            onClick={() => onTranscend()}
-            disabled={transcendBuilding}
-          >
-            <Icon icon={faDove} />{" "}
-            <FormattedMessage id="scene_roulette.transcend" />
-          </Button>
-          <Dropdown className="ml-2" id="vibe-radio-dropdown">
-            <Dropdown.Toggle variant="outline-danger" size="sm">
-              <Icon icon={faRadio} />{" "}
-              <FormattedMessage id="scene_roulette.radio" />
-            </Dropdown.Toggle>
-            <Dropdown.Menu>
-              {((MoodsCriterionOption.options ?? []) as IOptionType[]).map(
-                (o) => (
-                  <Dropdown.Item
-                    key={String(o.id)}
-                    onClick={() => startVibeRadio(String(o.id))}
-                  >
-                    {String(o.id)}
-                  </Dropdown.Item>
-                )
-              )}
-            </Dropdown.Menu>
-          </Dropdown>
-          <Button
-            variant={edging ? "warning" : "outline-warning"}
-            className="ml-2"
-            onClick={() => toggleEdging()}
-          >
-            <Icon icon={faHourglassHalf} />{" "}
-            <FormattedMessage id="scene_roulette.edging" />
-          </Button>
-          {edging && (
+          <div className="roulette-segment roulette-queue">
+            <Button
+              variant="danger"
+              onClick={() => queueRandom(autoPlayOnSelected)}
+            >
+              <Icon icon={faDice} />{" "}
+              <FormattedMessage id="scene_roulette.button" />
+            </Button>
+          </div>
+          <div className="roulette-segment roulette-session">
+            <Button
+              variant={afterglow ? "primary" : "outline-primary"}
+              onClick={() => toggleAfterglow()}
+            >
+              <Icon icon={faBolt} />{" "}
+              <FormattedMessage id="scene_roulette.afterglow" />
+            </Button>
+            <Button
+              variant={blind ? "dark" : "outline-dark"}
+              onClick={() => toggleBlind()}
+            >
+              <Icon icon={faEyeSlash} />{" "}
+              <FormattedMessage id="scene_roulette.blind" />
+            </Button>
+            <Button
+              variant={edging ? "warning" : "outline-warning"}
+              onClick={() => toggleEdging()}
+            >
+              <Icon icon={faHourglassHalf} />{" "}
+              <FormattedMessage id="scene_roulette.edging" />
+            </Button>
             <Form.Control
               as="select"
               className="edge-interval-select"
               value={edgeInterval}
+              disabled={!edging}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 setEdgeInterval(Number(e.currentTarget.value))
               }
@@ -1583,8 +1540,69 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
                 </option>
               ))}
             </Form.Control>
-          )}
+            <Button
+              variant={transcend ? "success" : "outline-success"}
+              onClick={() => onTranscend()}
+            >
+              <Icon icon={faDove} />{" "}
+              <FormattedMessage id="scene_roulette.transcend" />
+            </Button>
+            <Dropdown id="vibe-radio-dropdown">
+              <Dropdown.Toggle variant="outline-danger" size="sm">
+                <Icon icon={faRadio} />{" "}
+                <FormattedMessage id="scene_roulette.radio" />
+              </Dropdown.Toggle>
+              <Dropdown.Menu>
+                {((MoodsCriterionOption.options ?? []) as IOptionType[]).map(
+                  (o) => (
+                    <Dropdown.Item
+                      key={String(o.id)}
+                      onClick={() => startVibeRadio(String(o.id))}
+                    >
+                      {String(o.id)}
+                    </Dropdown.Item>
+                  )
+                )}
+              </Dropdown.Menu>
+            </Dropdown>
+          </div>
+          <div className="roulette-segment roulette-meta">
+            <Button
+              variant="outline-info"
+              onClick={() =>
+                history.push(`/aiChat?watching=${scene?.id ?? ""}`)
+              }
+            >
+              <Icon icon={faComments} />{" "}
+              <FormattedMessage id="scene_roulette.chat" />
+            </Button>
+            <div className="who-is-she-slot">
+              <WhoIsSheChip sceneId={scene?.id} />
+            </div>
+          </div>
         </div>
+        {afterglow && (
+          <div className="session-status-strip">
+            <span className="session-status-elapsed">
+              <Icon icon={faClock} /> {Math.floor(elapsedSecs / 60)}:
+              {String(elapsedSecs % 60).padStart(2, "0")}
+            </span>
+            <span className="session-status-o">
+              <Icon icon={faHeart} /> {sessionLog?.oCount ?? 0}
+            </span>
+            {transcend && (
+              <span className="session-badge session-badge-transcend">
+                Transcend · scene {transcendScene}
+              </span>
+            )}
+            {blind && (
+              <span className="session-badge session-badge-blind">Blind</span>
+            )}
+            {edging && (
+              <span className="session-badge session-badge-edging">Edging</span>
+            )}
+          </div>
+        )}
         <ClimaxProjection sceneId={scene?.id} active={afterglow} />
         <ScenePlayer
           key="ScenePlayer"
@@ -1635,17 +1653,30 @@ const SceneLoader: React.FC<RouteComponentProps<ISceneParams>> = ({
         </div>
       )}
 
+      {showSessionBuild && (
+        <AISessionBuildDialog
+          initial={{ durationMinutes: 60, minSteam: 7, ordering: "build_up" }}
+          onStart={() => {
+            if (!transcendPending) return;
+            setTranscendPending(false);
+            setTranscend(true);
+            transcendCount.current = 0;
+            setTranscendScene(0);
+            setEdging(true);
+            localStorage.setItem("stash.achievement.transcend", "1");
+          }}
+          onClose={() => {
+            setShowSessionBuild(false);
+            setTranscendPending(false);
+          }}
+        />
+      )}
       {sessionRecap && (
         <ModalComponent
           show
           icon={faBolt}
           header={intl.formatMessage({ id: "scene_roulette.recap" })}
           onHide={() => setSessionRecap(null)}
-          cancel={{
-            onClick: () => setSessionRecap(null),
-            text: intl.formatMessage({ id: "actions.close" }),
-            variant: "secondary",
-          }}
         >
           <div>
             <p>

@@ -77,6 +77,7 @@ func (j *Job) statusCopy() Job {
 		Status:      j.Status,
 		Details:     j.Details,
 		Description: j.Description,
+		Type:        j.Type,
 		Progress:    j.Progress,
 		StartTime:   j.StartTime,
 		EndTime:     j.EndTime,

@@ -1,5 +1,6 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
+import { Link } from "react-router-dom";
 import { useStats } from "src/core/StashService";
 
 export const RANKS = [
@@ -77,8 +78,10 @@ export const ThroneProgress: React.FC<{ compact?: boolean }> = ({
   return (
     <div className={compact ? "throne-compact" : "throne"}>
       <h5>
-        <FormattedMessage id="throne.heading" /> —{" "}
-        <FormattedMessage id={rank.nameID} />{" "}
+        <Link to="/scoreboard" className="throne-heading-link">
+          <FormattedMessage id="throne.heading" />
+        </Link>{" "}
+        — <FormattedMessage id={rank.nameID} />{" "}
         <span className="text-muted">· LVL {level}</span>
       </h5>
       <div className="progress">

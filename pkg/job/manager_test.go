@@ -42,6 +42,38 @@ func (e *testExec) Execute(ctx context.Context, p *Progress) error {
 	return nil
 }
 
+func TestAddWithType(t *testing.T) {
+	m := NewManager()
+	exec := newTestExec(make(chan struct{}))
+	jobID := m.AddWithType(context.Background(), "AI job", "ai", exec)
+
+	assert := assert.New(t)
+	assert.Equal(StatusReady, m.GetJob(jobID).Status)
+
+	// type must survive statusCopy (GetJob/GetQueue/subscriptions)
+	assert.Equal("ai", m.GetJob(jobID).Type)
+
+	queue := m.GetQueue()
+	assert.Len(queue, 1)
+	assert.Equal("ai", queue[0].Type)
+
+	// subscription events must carry the type too
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sub := m.Subscribe(ctx)
+
+	exec2 := newTestExec(make(chan struct{}))
+	m.AddWithType(context.Background(), "AI job 2", "ai", exec2)
+
+	select {
+	case j := <-sub.NewJob:
+		assert.Equal("ai", j.Type)
+	case <-time.After(sleepTime):
+		t.Error("no new job event received")
+	}
+}
+
 func TestAdd(t *testing.T) {
 	m := NewManager()
 

@@ -62,7 +62,7 @@ export const AIAudioAnalysisDialog: React.FC<IAIAudioAnalysisDialogProps> = ({
       })}
       accept={{
         onClick: onAnalyze,
-        text: intl.formatMessage({ id: "actions.generate" }),
+        text: intl.formatMessage({ id: "actions.analyze_audio" }),
       }}
       cancel={{
         onClick: () => onClose(),

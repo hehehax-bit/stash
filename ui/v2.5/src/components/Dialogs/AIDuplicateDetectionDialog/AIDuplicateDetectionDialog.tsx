@@ -215,7 +215,7 @@ export const AIDuplicateDetectionDialog: React.FC<
         onClick: onDetect,
         text: loading
           ? "Detecting..."
-          : intl.formatMessage({ id: "actions.semantic_search" }),
+          : intl.formatMessage({ id: "actions.detect_duplicates" }),
       }}
       isRunning={loading}
       cancel={{

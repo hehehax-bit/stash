@@ -35,7 +35,7 @@ const LeaderboardTable: React.FC<{
               <td>
                 <Link to={`/performers/${r.id}`}>{r.name}</Link>
               </td>
-              <td className="text-muted">{r.stat}</td>
+              {r.stat && <td className="text-muted">{r.stat}</td>}
               <td className="text-right">{r.value}</td>
             </tr>
           ))}
@@ -88,9 +88,13 @@ export const ScoreboardPage: React.FC = () => {
     }
   })();
 
-  if (!moanData && !oData && !timelineData && !savedData) {
+  const [showAllTimeline, setShowAllTimeline] = React.useState(false);
+
+  if (!moanData && !oData && !timelineData && !savedData && !plansData) {
     return <LoadingIndicator />;
   }
+
+  const visibleTimeline = showAllTimeline ? timeline : timeline.slice(0, 14);
 
   return (
     <div className="scoreboard-page container">
@@ -219,23 +223,55 @@ export const ScoreboardPage: React.FC = () => {
                 <FormattedMessage id="scoreboard.empty" />
               </div>
             ) : (
-              <div className="finish-timeline">
-                {timeline.slice(0, 14).map((e) => (
-                  <div key={e.date} className="finish-bar-row">
-                    <span className="finish-date">{e.date.slice(5)}</span>
-                    <div className="finish-bar-track">
-                      <div
-                        className="finish-bar"
-                        style={{
-                          width: `${Math.min(100, (e.count / 6) * 100)}%`,
-                        }}
-                      />
+              <>
+                <div className="finish-timeline">
+                  {visibleTimeline.map((e) => (
+                    <div key={e.date} className="finish-bar-row">
+                      <span className="finish-date">{e.date.slice(5)}</span>
+                      <div className="finish-bar-track">
+                        <div
+                          className="finish-bar"
+                          style={{
+                            width: `${Math.min(100, (e.count / 6) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="finish-count">{e.count}</span>
                     </div>
-                    <span className="finish-count">{e.count}</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+                {timeline.length > 14 && (
+                  <button
+                    className="btn btn-sm btn-link"
+                    onClick={() => setShowAllTimeline(!showAllTimeline)}
+                  >
+                    {showAllTimeline ? (
+                      <FormattedMessage id="achievements.show_less" />
+                    ) : (
+                      <FormattedMessage id="scoreboard.show_all_days" />
+                    )}
+                  </button>
+                )}
+              </>
             )}
+          </div>
+        </div>
+        <div className="col-12 col-sm-4">
+          <div className="scoreboard-section">
+            <h5>
+              <FormattedMessage id="scoreboard.quick_links" />
+            </h5>
+            <div className="d-flex flex-column">
+              <Link to="/">
+                <FormattedMessage id="actions.front_page" /> →
+              </Link>
+              <Link to="/aiChat" className="mt-1">
+                <FormattedMessage id="scene_roulette.chat" /> →
+              </Link>
+              <Link to="/saved" className="mt-1">
+                <FormattedMessage id="saved_moments.heading" /> →
+              </Link>
+            </div>
           </div>
         </div>
       </div>

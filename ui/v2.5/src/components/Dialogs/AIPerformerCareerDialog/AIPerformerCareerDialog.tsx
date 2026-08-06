@@ -64,7 +64,7 @@ export const AIPerformerCareerDialog: React.FC<
       })}
       accept={{
         onClick: onAnalyze,
-        text: intl.formatMessage({ id: "actions.generate" }),
+        text: intl.formatMessage({ id: "actions.analyze_careers" }),
       }}
       cancel={{
         onClick: () => onClose(),

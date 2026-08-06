@@ -315,11 +315,11 @@ export const IdentifyDialog: React.FC<IIdentifyDialogProps> = ({
 
   function getAvailableSources() {
     // only include scrapers not already present
-    return !editingSource?.id === undefined
-      ? []
-      : (allSources?.filter((s) => {
-          return !sources.some((ss) => ss.id === s.id);
-        }) ?? []);
+    return (
+      allSources?.filter((s) => {
+        return !sources.some((ss) => ss.id === s.id);
+      }) ?? []
+    );
   }
 
   function onEditSource(s?: IScraperSource) {

@@ -67,27 +67,33 @@ func (j *AITranslateJob) Execute(ctx context.Context, progress *job.Progress) er
 	r := instance.Repository
 
 	translated := 0
-	for _, entityType := range entityTypes {
-		switch entityType {
-		case entityTypeScene:
-			count, err := j.translateScenes(ctx, client, r, language, maxItems)
-			if err != nil {
-				return err
+	err := r.WithDB(ctx, func(ctx context.Context) error {
+		for _, entityType := range entityTypes {
+			switch entityType {
+			case entityTypeScene:
+				count, err := j.translateScenes(ctx, client, r, language, maxItems)
+				if err != nil {
+					return err
+				}
+				translated += count
+			case entityTypeImage:
+				count, err := j.translateImages(ctx, client, r, language, maxItems)
+				if err != nil {
+					return err
+				}
+				translated += count
+			case entityTypePerformer:
+				count, err := j.translatePerformers(ctx, client, r, language, maxItems)
+				if err != nil {
+					return err
+				}
+				translated += count
 			}
-			translated += count
-		case entityTypeImage:
-			count, err := j.translateImages(ctx, client, r, language, maxItems)
-			if err != nil {
-				return err
-			}
-			translated += count
-		case entityTypePerformer:
-			count, err := j.translatePerformers(ctx, client, r, language, maxItems)
-			if err != nil {
-				return err
-			}
-			translated += count
 		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	logger.Infof("AI translation complete: %d entities translated into %s", translated, language)
@@ -201,21 +207,26 @@ func (j *AITranslateJob) translateGeneric(ctx context.Context, client *ai.Client
 		}
 
 		stored := false
-		for field, text := range result {
-			if text == "" {
-				continue
+		if err := r.WithTxn(ctx, func(ctx context.Context) error {
+			for field, text := range result {
+				if text == "" {
+					continue
+				}
+				if err := r.AITranslation.Create(ctx, &models.AITranslation{
+					EntityType:     ref.entityType,
+					EntityID:       ref.entityID,
+					Language:       language,
+					Field:          field,
+					TranslatedText: text,
+				}); err != nil {
+					return err
+				}
+				stored = true
 			}
-			if err := r.AITranslation.Create(ctx, &models.AITranslation{
-				EntityType:     ref.entityType,
-				EntityID:       ref.entityID,
-				Language:       language,
-				Field:          field,
-				TranslatedText: text,
-			}); err != nil {
-				logger.Warnf("Error storing translation for %s %d: %v", ref.entityType, ref.entityID, err)
-				continue
-			}
-			stored = true
+			return nil
+		}); err != nil {
+			logger.Warnf("Error storing translation for %s %d: %v", ref.entityType, ref.entityID, err)
+			continue
 		}
 		if stored {
 			translated++

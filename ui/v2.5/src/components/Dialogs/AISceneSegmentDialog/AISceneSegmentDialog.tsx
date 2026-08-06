@@ -62,7 +62,7 @@ export const AISceneSegmentDialog: React.FC<IAISceneSegmentDialogProps> = ({
       })}
       accept={{
         onClick: onSegment,
-        text: intl.formatMessage({ id: "actions.generate" }),
+        text: intl.formatMessage({ id: "actions.segment_scenes" }),
       }}
       cancel={{
         onClick: () => onClose(),

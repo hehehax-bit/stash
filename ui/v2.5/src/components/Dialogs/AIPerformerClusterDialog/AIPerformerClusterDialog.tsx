@@ -67,7 +67,7 @@ export const AIPerformerClusterDialog: React.FC<
       })}
       accept={{
         onClick: onCluster,
-        text: intl.formatMessage({ id: "actions.generate" }),
+        text: intl.formatMessage({ id: "actions.cluster_performers" }),
       }}
       cancel={{
         onClick: () => onClose(),

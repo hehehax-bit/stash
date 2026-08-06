@@ -462,6 +462,20 @@ button.collapse-button {
   justify-content: space-between;
 }
 
+.ModalComponent .modal-body {
+  max-height: calc(100vh - 14rem);
+  overflow-y: auto;
+}
+
+.ModalComponent .modal-header .close {
+  color: inherit;
+  opacity: 0.6;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
 .scrape-url-button:disabled {
   opacity: 0.5;
 }
@@ -1219,8 +1233,8 @@ input[type="range"].double-range-slider-max {
   }
 }
 
-// StashBox Search Modal
-.StashBoxSearchModal {
+// StashBox ID Search Modal
+.StashBoxIDSearchModal {
   &-list {
     list-style: none;
     padding: 0;

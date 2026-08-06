@@ -59,7 +59,7 @@ export const AIMediaQualityDialog: React.FC<IAIMediaQualityDialogProps> = ({
       })}
       accept={{
         onClick: onAssess,
-        text: intl.formatMessage({ id: "actions.generate" }),
+        text: intl.formatMessage({ id: "actions.assess_quality" }),
       }}
       cancel={{
         onClick: () => onClose(),

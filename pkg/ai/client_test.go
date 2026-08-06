@@ -1,15 +1,19 @@
 package ai
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/disintegration/imaging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -451,4 +455,74 @@ func TestClientTranscribeSegments_SecondsUntouched(t *testing.T) {
 	require.Len(t, result.Segments, 1)
 	assert.InDelta(t, 0.5, result.Segments[0].Start, 0.0001)
 	assert.InDelta(t, 1.5, result.Segments[0].End, 0.0001)
+}
+
+func TestNormalizeVisionImage_Downscales(t *testing.T) {
+	img := imaging.New(3000, 2000, color.White)
+	var buf bytes.Buffer
+	require.NoError(t, imaging.Encode(&buf, img, imaging.PNG))
+
+	normalized, mediaType := normalizeVisionImage(buf.Bytes())
+
+	require.Equal(t, "image/jpeg", mediaType)
+	decoded, err := imaging.Decode(bytes.NewReader(normalized))
+	require.NoError(t, err)
+	bounds := decoded.Bounds()
+	assert.LessOrEqual(t, bounds.Dx(), maxVisionImageDimension)
+	assert.LessOrEqual(t, bounds.Dy(), maxVisionImageDimension)
+	assert.Greater(t, len(normalized), 0)
+}
+
+func TestNormalizeVisionImage_SmallUntouched(t *testing.T) {
+	img := imaging.New(200, 100, color.Black)
+	var buf bytes.Buffer
+	require.NoError(t, imaging.Encode(&buf, img, imaging.JPEG))
+
+	normalized, mediaType := normalizeVisionImage(buf.Bytes())
+
+	assert.Equal(t, "image/jpeg", mediaType)
+	decoded, err := imaging.Decode(bytes.NewReader(normalized))
+	require.NoError(t, err)
+	assert.Equal(t, 200, decoded.Bounds().Dx())
+	assert.Equal(t, 100, decoded.Bounds().Dy())
+}
+
+func TestNormalizeVisionImage_CorruptPassthrough(t *testing.T) {
+	data := []byte("not an image at all")
+	normalized, _ := normalizeVisionImage(data)
+
+	assert.Nil(t, normalized)
+}
+
+func TestNormalizeVisionImagePart(t *testing.T) {
+	img := imaging.New(2500, 2500, color.Gray{Y: 128})
+	var buf bytes.Buffer
+	require.NoError(t, imaging.Encode(&buf, img, imaging.PNG))
+
+	part := MultiImage{
+		Base64:    base64.StdEncoding.EncodeToString(buf.Bytes()),
+		MediaType: "image/png",
+	}
+
+	normalized := normalizeVisionImagePart(part)
+
+	require.NotEqual(t, part.Base64, normalized.Base64)
+	require.Equal(t, "image/jpeg", normalized.MediaType)
+	decoded, err := imaging.Decode(bytes.NewReader(mustBase64(t, normalized.Base64)))
+	require.NoError(t, err)
+	assert.LessOrEqual(t, decoded.Bounds().Dx(), maxVisionImageDimension)
+
+	// empty and corrupt parts pass through unchanged
+	empty := normalizeVisionImagePart(MultiImage{})
+	assert.Equal(t, "", empty.Base64)
+
+	corrupt := MultiImage{Base64: base64.StdEncoding.EncodeToString([]byte("junk")), MediaType: "image/png"}
+	assert.Equal(t, corrupt, normalizeVisionImagePart(corrupt))
+}
+
+func mustBase64(t *testing.T, s string) []byte {
+	t.Helper()
+	data, err := base64.StdEncoding.DecodeString(s)
+	require.NoError(t, err)
+	return data
 }

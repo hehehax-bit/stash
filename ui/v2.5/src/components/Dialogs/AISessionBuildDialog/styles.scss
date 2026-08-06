@@ -1,0 +1,47 @@
+.ai-session-section-title {
+  border-bottom: 1px solid $border-color;
+  font-size: 0.9rem;
+  margin: 0.5rem 0 0.75rem;
+  padding-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+.ai-session-preview {
+  max-height: 12rem;
+  overflow-y: auto;
+  padding-left: 1.25rem;
+
+  li {
+    font-size: 0.85rem;
+  }
+}
+
+.ai-session-plan-name {
+  max-width: 14rem;
+}
+
+.ai-session-oracle-summary {
+  background-color: rgba(23, 162, 184, 0.12);
+  border-radius: 0.25rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.ritual-order-list {
+  background-color: rgba(138, 155, 168, 0.08);
+  border-radius: 0.25rem;
+  max-width: 24rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.ritual-order-item {
+  align-items: center;
+  display: flex;
+  font-size: 0.9rem;
+  justify-content: space-between;
+  padding: 0.15rem 0;
+}
+
+.ai-session-saved-plan {
+  align-items: center;
+  display: flex;
+}

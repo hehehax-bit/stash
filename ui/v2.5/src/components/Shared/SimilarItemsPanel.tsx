@@ -226,11 +226,6 @@ export const SimilarItemsPanel: React.FC<ISimilarItemsPanelProps> = ({
         header={intl.formatMessage({ id: "similar_items" })}
         dialogClassName="modal-lg"
         onHide={() => setShowModal(false)}
-        cancel={{
-          onClick: () => setShowModal(false),
-          text: intl.formatMessage({ id: "actions.close" }),
-          variant: "secondary",
-        }}
       >
         {entityType === "scene" && sceneIds.length > 0 && (
           <div className="similar-items-actions mb-3">

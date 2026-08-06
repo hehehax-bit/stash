@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button, Form } from "react-bootstrap";
 import * as GQL from "src/core/generated-graphql";
 import { ModalComponent } from "src/components/Shared/Modal";
@@ -31,6 +31,12 @@ export const AITranslationReviewDialog: React.FC<
   const [rejectAll] = GQL.useAiTranslationRejectAllMutation();
 
   const translations = data?.aiTranslations ?? [];
+
+  // refresh while the dialog is open so findings appear during a running job
+  useEffect(() => {
+    const timer = setInterval(() => refetch(), 10000);
+    return () => clearInterval(timer);
+  }, [refetch]);
 
   async function onApply(id: string) {
     try {
@@ -98,13 +104,10 @@ export const AITranslationReviewDialog: React.FC<
   return (
     <ModalComponent
       show
+      onHide={onClose}
       icon={faLanguage}
       header={intl.formatMessage({ id: "config.tasks.ai_translate.review" })}
-      cancel={{
-        onClick: () => onClose(),
-        text: intl.formatMessage({ id: "actions.close" }),
-        variant: "secondary",
-      }}
+      dialogClassName="modal-xl"
     >
       <Form.Group>
         <Form.Control
@@ -150,8 +153,8 @@ export const AITranslationReviewDialog: React.FC<
 
       {translations.map((t) => (
         <div key={t.id} className="row mb-3 align-items-center">
-          <div className="col-3">{entityPreview(t)}</div>
-          <div className="col-6">
+          <div className="col-4">{entityPreview(t)}</div>
+          <div className="col-5">
             <div className="small text-muted">
               {t.field} ({t.language})
             </div>

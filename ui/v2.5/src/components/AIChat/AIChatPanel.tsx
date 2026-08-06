@@ -19,13 +19,15 @@ import {
   faTimes,
   faRedo,
   faExclamationTriangle,
+  faArrowLeft,
+  faEye,
 } from "@fortawesome/free-solid-svg-icons";
 import { useHistory, useLocation } from "react-router-dom";
 import { useRemarkSync } from "react-remark";
 import remarkGfm from "remark-gfm";
 import { useApolloClient } from "@apollo/client";
 import { useToast } from "src/hooks/Toast";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024;
 
@@ -649,6 +651,10 @@ const AiMessage: React.FC<{
 }> = ({ message, onDelete, onRetry }) => {
   const entityRefs = extractEntityRefs(message.content);
   const isFailed = message.role === "user" && message.error;
+  const [showAllRefs, setShowAllRefs] = useState(false);
+  const visibleRefs = showAllRefs
+    ? entityRefs
+    : entityRefs.slice(0, ENTITY_PREVIEW_LIMIT);
 
   return (
     <div
@@ -697,18 +703,37 @@ const AiMessage: React.FC<{
       )}
       {message.role === "assistant" && entityRefs.length > 0 && (
         <div className="ai-chat-entity-previews">
-          {entityRefs.map((er) => (
+          {visibleRefs.map((er) => (
             <EntityPreviewCard key={`${er.type}:${er.id}`} entityRef={er} />
           ))}
+          {entityRefs.length > ENTITY_PREVIEW_LIMIT && (
+            <button
+              className="btn btn-sm btn-link ai-chat-preview-more"
+              onClick={() => setShowAllRefs(!showAllRefs)}
+            >
+              {showAllRefs ? (
+                <FormattedMessage id="ai_chat.show_fewer" />
+              ) : (
+                <FormattedMessage
+                  id="ai_chat.show_all"
+                  values={{ count: entityRefs.length }}
+                />
+              )}
+            </button>
+          )}
         </div>
       )}
     </div>
   );
 };
 
+// cap how many entity preview cards render per message
+const ENTITY_PREVIEW_LIMIT = 4;
+
 const AIChatPanel: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
+  const intl = useIntl();
 
   const { data: configData } = GQL.useAiConfigQuery();
   const { data: sessionsData, loading: sessionsLoading } =
@@ -736,7 +761,7 @@ const AIChatPanel: React.FC = () => {
   const watchingTitle = watchingData?.findScene?.title;
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const Toast = useToast();
@@ -836,7 +861,7 @@ const AIChatPanel: React.FC = () => {
       id: `opt-${Date.now()}`,
       session_id: activeSessionId ?? "",
       role: "user",
-      content: finalText || "[image]",
+      content: text || "[image]",
       created_at: new Date().toISOString(),
       isOptimistic: true,
       pendingImage: image,
@@ -1038,13 +1063,59 @@ const AIChatPanel: React.FC = () => {
         )}
       </div>
       <div className="ai-chat-main">
+        <div className="ai-chat-topbar">
+          <button
+            className="btn btn-minimal ai-chat-back"
+            onClick={() => history.push("/")}
+          >
+            <Icon icon={faArrowLeft} /> <FormattedMessage id="ai_chat.back" />
+          </button>
+          {watchingId && watchingTitle && (
+            <div className="ai-chat-watching">
+              <Icon icon={faEye} />
+              <FormattedMessage id="ai_chat.watching" />{" "}
+              <strong>{watchingTitle}</strong>
+              <button
+                className="btn btn-sm btn-outline-secondary ml-2"
+                onClick={() => {
+                  setWatchingId(null);
+                  const params = new URLSearchParams(location.search);
+                  params.delete("watching");
+                  history.replace({ search: params.toString() });
+                }}
+              >
+                <FormattedMessage id="ai_chat.stop_watching" />
+              </button>
+            </div>
+          )}
+        </div>
         {!activeSessionId && chatMessages.length === 0 ? (
           <div className="ai-chat-empty">
             <Icon icon={faRobot} size="4x" />
-            <h3>Ask about your library</h3>
+            <h3>
+              <FormattedMessage id="ai_chat.empty_heading" />
+            </h3>
             <p>
-              Search scenes, performers, tags, and more using natural language.
+              <FormattedMessage id="ai_chat.empty_subheading" />
             </p>
+            <div className="ai-chat-suggestions">
+              {[
+                "ai_chat.suggestion_1",
+                "ai_chat.suggestion_2",
+                "ai_chat.suggestion_3",
+                "ai_chat.suggestion_4",
+              ].map((id) => (
+                <button
+                  key={id}
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={() =>
+                    onSend({ text: intl.formatMessage({ id }), image: null })
+                  }
+                >
+                  {intl.formatMessage({ id })}
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="ai-chat-messages">
@@ -1071,7 +1142,12 @@ const AIChatPanel: React.FC = () => {
               </button>
             </div>
           )}
-          <label className="ai-chat-context-toggle">
+          <label
+            className="ai-chat-context-toggle"
+            title={intl.formatMessage({
+              id: "ai_chat.use_library_context_hint",
+            })}
+          >
             <input
               type="checkbox"
               checked={useLibraryContext}
@@ -1097,13 +1173,20 @@ const AIChatPanel: React.FC = () => {
             >
               <Icon icon={faCamera} />
             </button>
-            <input
+            <textarea
               ref={inputRef}
-              type="text"
-              className="form-control"
-              placeholder="Ask a question about your library..."
+              className="form-control ai-chat-textarea"
+              placeholder={intl.formatMessage({
+                id: "ai_chat.input_placeholder",
+              })}
               value={input}
+              rows={1}
               onChange={(e) => setInput(e.target.value)}
+              onInput={(e) => {
+                const el = e.currentTarget;
+                el.style.height = "auto";
+                el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();

@@ -1024,6 +1024,69 @@ input[type="range"].blue-slider {
   }
 }
 
+.roulette-segment {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+
+  &.roulette-session {
+    border-left: 1px solid $border-color;
+    border-right: 1px solid $border-color;
+    padding: 0 0.5rem;
+  }
+}
+
+.who-is-she-slot {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 8rem;
+}
+
+.session-status-strip {
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.35);
+  border-radius: 0.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  padding: 0.35rem 0.75rem;
+
+  .session-status-elapsed,
+  .session-status-o {
+    align-items: center;
+    display: inline-flex;
+    font-variant-numeric: tabular-nums;
+    gap: 0.3rem;
+  }
+}
+
+.session-badge {
+  border-radius: 0.75rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.6rem;
+  text-transform: uppercase;
+
+  &-transcend {
+    background-color: rgba(40, 167, 69, 0.25);
+    color: #7fd99a;
+  }
+
+  &-blind {
+    background-color: rgba(108, 117, 125, 0.3);
+    color: #d3d9df;
+  }
+
+  &-edging {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: #ffe08a;
+  }
+}
+
 .climax-map {
   background-color: rgba(0, 0, 0, 0.3);
   border-radius: 0.25rem;

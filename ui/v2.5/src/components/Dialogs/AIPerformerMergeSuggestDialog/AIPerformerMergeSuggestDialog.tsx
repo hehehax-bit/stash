@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button, Form } from "react-bootstrap";
 import * as GQL from "src/core/generated-graphql";
 import { ModalComponent } from "src/components/Shared/Modal";
@@ -6,7 +6,7 @@ import { LoadingIndicator } from "src/components/Shared/LoadingIndicator";
 import { PerformerCard } from "src/components/Performers/PerformerCard";
 import { useToast } from "src/hooks/Toast";
 import { FormattedMessage, useIntl } from "react-intl";
-import { faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faPeopleArrows } from "@fortawesome/free-solid-svg-icons";
 
 interface IAIPerformerMergeSuggestDialogProps {
   onClose: () => void;
@@ -29,6 +29,12 @@ export const AIPerformerMergeSuggestDialog: React.FC<
   const [rejectAll] = GQL.useAiPerformerSuggestionRejectAllMutation();
 
   const suggestions = data?.aiPerformerMergeSuggestions ?? [];
+
+  // refresh while the dialog is open so suggestions appear during a running job
+  useEffect(() => {
+    const timer = setInterval(() => refetch(), 10000);
+    return () => clearInterval(timer);
+  }, [refetch]);
 
   async function onApply(id: string) {
     try {
@@ -83,15 +89,12 @@ export const AIPerformerMergeSuggestDialog: React.FC<
   return (
     <ModalComponent
       show
-      icon={faUsers}
+      onHide={onClose}
+      icon={faPeopleArrows}
       header={intl.formatMessage({
         id: "config.tasks.ai_performer_merge_suggest.heading",
       })}
-      cancel={{
-        onClick: () => onClose(),
-        text: intl.formatMessage({ id: "actions.close" }),
-        variant: "secondary",
-      }}
+      dialogClassName="modal-xl"
     >
       <Form.Group>
         <Form.Control

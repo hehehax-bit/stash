@@ -61,7 +61,7 @@ export const AIFileRenameDialog: React.FC<IAIFileRenameDialogProps> = ({
       header={intl.formatMessage({ id: "config.tasks.ai_file_rename.heading" })}
       accept={{
         onClick: onGenerate,
-        text: intl.formatMessage({ id: "actions.generate" }),
+        text: intl.formatMessage({ id: "actions.rename_files" }),
       }}
       cancel={{
         onClick: () => onClose(),

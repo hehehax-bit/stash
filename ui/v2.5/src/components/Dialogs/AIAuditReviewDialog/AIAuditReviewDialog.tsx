@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button, Form } from "react-bootstrap";
 import * as GQL from "src/core/generated-graphql";
 import { ModalComponent } from "src/components/Shared/Modal";
@@ -7,7 +7,7 @@ import { SceneCard } from "src/components/Scenes/SceneCard";
 import { ImageCard } from "src/components/Images/ImageCard";
 import { useToast } from "src/hooks/Toast";
 import { FormattedMessage, useIntl } from "react-intl";
-import { faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faClipboardCheck } from "@fortawesome/free-solid-svg-icons";
 
 interface IAIAuditReviewDialogProps {
   onClose: () => void;
@@ -36,6 +36,12 @@ export const AIAuditReviewDialog: React.FC<IAIAuditReviewDialogProps> = ({
   const [rejectAll] = GQL.useAiAuditRejectAllMutation();
 
   const audits = data?.aiAudits ?? [];
+
+  // refresh while the dialog is open so findings appear during a running audit
+  useEffect(() => {
+    const timer = setInterval(() => refetch(), 10000);
+    return () => clearInterval(timer);
+  }, [refetch]);
 
   async function onApply(id: string) {
     try {
@@ -100,13 +106,10 @@ export const AIAuditReviewDialog: React.FC<IAIAuditReviewDialogProps> = ({
   return (
     <ModalComponent
       show
-      icon={faSearch}
+      onHide={onClose}
+      icon={faClipboardCheck}
       header={intl.formatMessage({ id: "config.tasks.ai_audit.review" })}
-      cancel={{
-        onClick: () => onClose(),
-        text: intl.formatMessage({ id: "actions.close" }),
-        variant: "secondary",
-      }}
+      dialogClassName="modal-xl"
     >
       <Form.Group>
         <Form.Control
@@ -152,8 +155,8 @@ export const AIAuditReviewDialog: React.FC<IAIAuditReviewDialogProps> = ({
 
       {audits.map((a) => (
         <div key={a.id} className="row mb-3 align-items-center">
-          <div className="col-3">{entityPreview(a)}</div>
-          <div className="col-6">
+          <div className="col-4">{entityPreview(a)}</div>
+          <div className="col-5">
             <div>
               <strong>{FIELD_LABELS[a.field] ?? a.field}</strong>
               {a.current_value && (
