@@ -7,6 +7,7 @@ import {
   createDurationCriterionOption,
 } from "./criteria/criterion";
 import { HasMarkersCriterionOption } from "./criteria/has-markers";
+import { HasEmbeddingCriterionOption } from "./criteria/has-embedding";
 import { SceneIsMissingCriterionOption } from "./criteria/is-missing";
 import {
   GroupsCriterionOption,
@@ -67,6 +68,11 @@ const sortByOptions = [
       sfwMessageID: "o_count_sfw",
     },
     {
+      messageID: "o_count_random",
+      value: "o_counter_random",
+      sfwMessageID: "o_count_random_sfw",
+    },
+    {
       messageID: "last_o_at",
       value: "last_o_at",
       sfwMessageID: "last_o_at_sfw",
@@ -121,6 +127,7 @@ const criterionOptions = [
   createMandatoryNumberCriterionOption("play_count"),
   createMandatoryTimestampCriterionOption("last_played_at"),
   HasMarkersCriterionOption,
+  HasEmbeddingCriterionOption,
   SceneIsMissingCriterionOption,
   TagsCriterionOption,
   createMandatoryNumberCriterionOption("tag_count"),

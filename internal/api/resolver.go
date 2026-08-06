@@ -10,6 +10,7 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/stashapp/stash/internal/build"
 	"github.com/stashapp/stash/internal/manager"
+	"github.com/stashapp/stash/internal/manager/config"
 	"github.com/stashapp/stash/pkg/logger"
 	"github.com/stashapp/stash/pkg/models"
 	"github.com/stashapp/stash/pkg/plugin/hook"
@@ -110,6 +111,232 @@ func (r *Resolver) Plugin() PluginResolver {
 }
 func (r *Resolver) ConfigResult() ConfigResultResolver {
 	return &configResultResolver{r}
+}
+func (r *Resolver) AIConfig() AIConfigResolver {
+	return &aiConfigResolver{r}
+}
+
+type aiConfigResolver struct{ *Resolver }
+
+func (r *aiConfigResolver) ScheduledTasks(ctx context.Context, obj *config.AIConfig) (*AIScheduledTasksConfig, error) {
+	return &AIScheduledTasksConfig{
+		EmbeddingRefreshHours: obj.ScheduledTasks.EmbeddingRefreshHours,
+		AudioAnalysisHours:    obj.ScheduledTasks.AudioAnalysisHours,
+	}, nil
+}
+
+func (r *Resolver) AIConfigInput() AIConfigInputResolver {
+	return &aiConfigInputResolver{r}
+}
+
+type aiConfigInputResolver struct{ *Resolver }
+
+func (r *aiConfigInputResolver) ScheduledTasks(ctx context.Context, obj *config.AIConfigInput, data *AIScheduledTasksConfigInput) error {
+	if data == nil {
+		obj.ScheduledTasks = nil
+		return nil
+	}
+	cfg := config.AIScheduledTasksConfig{}
+	if data.EmbeddingRefreshHours != nil {
+		cfg.EmbeddingRefreshHours = *data.EmbeddingRefreshHours
+	}
+	if data.AudioAnalysisHours != nil {
+		cfg.AudioAnalysisHours = *data.AudioAnalysisHours
+	}
+	obj.ScheduledTasks = &cfg
+	return nil
+}
+
+func (r *Resolver) AIChatMessage() AIChatMessageResolver {
+	return &aiChatMessageResolver{r}
+}
+func (r *Resolver) AIChatSession() AIChatSessionResolver {
+	return &aiChatSessionResolver{r}
+}
+func (r *Resolver) AISuggestion() AISuggestionResolver {
+	return &aiSuggestionResolver{r}
+}
+
+type aiSuggestionResolver struct{ *Resolver }
+
+func (r *aiSuggestionResolver) ID(ctx context.Context, obj *AISuggestion) (string, error) {
+	return fmt.Sprintf("%d", obj.ID), nil
+}
+
+func (r *aiSuggestionResolver) Scene(ctx context.Context, obj *AISuggestion) (*models.Scene, error) {
+	return obj.Scene, nil
+}
+
+func (r *aiSuggestionResolver) Image(ctx context.Context, obj *AISuggestion) (*models.Image, error) {
+	return obj.Image, nil
+}
+
+func (r *Resolver) AIPerformerMergeSuggestion() AIPerformerMergeSuggestionResolver {
+	return &aiPerformerMergeSuggestionResolver{r}
+}
+
+type aiPerformerMergeSuggestionResolver struct{ *Resolver }
+
+func (r *aiPerformerMergeSuggestionResolver) ID(ctx context.Context, obj *AIPerformerMergeSuggestion) (string, error) {
+	return fmt.Sprintf("%d", obj.ID), nil
+}
+
+func (r *aiPerformerMergeSuggestionResolver) Source(ctx context.Context, obj *AIPerformerMergeSuggestion) (*models.Performer, error) {
+	return obj.Source, nil
+}
+
+func (r *aiPerformerMergeSuggestionResolver) Target(ctx context.Context, obj *AIPerformerMergeSuggestion) (*models.Performer, error) {
+	return obj.Target, nil
+}
+
+func (r *Resolver) AITranslation() AITranslationResolver {
+	return &aiTranslationResolver{r}
+}
+
+type aiTranslationResolver struct{ *Resolver }
+
+func (r *aiTranslationResolver) ID(ctx context.Context, obj *AITranslation) (string, error) {
+	return fmt.Sprintf("%d", obj.ID), nil
+}
+
+func (r *aiTranslationResolver) EntityID(ctx context.Context, obj *AITranslation) (string, error) {
+	return obj.EntityID, nil
+}
+
+func (r *aiTranslationResolver) Scene(ctx context.Context, obj *AITranslation) (*models.Scene, error) {
+	return obj.Scene, nil
+}
+
+func (r *aiTranslationResolver) Image(ctx context.Context, obj *AITranslation) (*models.Image, error) {
+	return obj.Image, nil
+}
+
+func (r *aiTranslationResolver) Performer(ctx context.Context, obj *AITranslation) (*models.Performer, error) {
+	return obj.Performer, nil
+}
+
+func (r *Resolver) AIPerformerCandidate() AIPerformerCandidateResolver {
+	return &aiPerformerCandidateResolver{r}
+}
+
+type aiPerformerCandidateResolver struct{ *Resolver }
+
+func (r *aiPerformerCandidateResolver) ID(ctx context.Context, obj *AIPerformerCandidate) (string, error) {
+	return fmt.Sprintf("%d", obj.ID), nil
+}
+
+func (r *aiPerformerCandidateResolver) EntityID(ctx context.Context, obj *AIPerformerCandidate) (string, error) {
+	return obj.EntityID, nil
+}
+
+func (r *aiPerformerCandidateResolver) MemberIDs(ctx context.Context, obj *AIPerformerCandidate) ([]string, error) {
+	return obj.MemberIDs, nil
+}
+
+func (r *aiPerformerCandidateResolver) Scene(ctx context.Context, obj *AIPerformerCandidate) (*models.Scene, error) {
+	return obj.Scene, nil
+}
+
+func (r *aiPerformerCandidateResolver) Image(ctx context.Context, obj *AIPerformerCandidate) (*models.Image, error) {
+	return obj.Image, nil
+}
+
+func (r *Resolver) AIAudit() AIAuditResolver {
+	return &aiAuditResolver{r}
+}
+
+type aiAuditResolver struct{ *Resolver }
+
+func (r *aiAuditResolver) ID(ctx context.Context, obj *AIAudit) (string, error) {
+	return fmt.Sprintf("%d", obj.ID), nil
+}
+
+func (r *aiAuditResolver) EntityID(ctx context.Context, obj *AIAudit) (string, error) {
+	return obj.EntityID, nil
+}
+
+func (r *aiAuditResolver) Scene(ctx context.Context, obj *AIAudit) (*models.Scene, error) {
+	return obj.Scene, nil
+}
+
+func (r *aiAuditResolver) Image(ctx context.Context, obj *AIAudit) (*models.Image, error) {
+	return obj.Image, nil
+}
+
+func (r *Resolver) AIMediaQuality() AIMediaQualityResolver {
+	return &aiMediaQualityResolver{r}
+}
+
+type aiMediaQualityResolver struct{ *Resolver }
+
+func (r *aiMediaQualityResolver) ID(ctx context.Context, obj *AIMediaQuality) (string, error) {
+	return fmt.Sprintf("%d", obj.ID), nil
+}
+
+func (r *aiMediaQualityResolver) Scene(ctx context.Context, obj *AIMediaQuality) (*models.Scene, error) {
+	return obj.Scene, nil
+}
+
+func (r *aiMediaQualityResolver) Image(ctx context.Context, obj *AIMediaQuality) (*models.Image, error) {
+	return obj.Image, nil
+}
+
+func (r *Resolver) AISceneAudio() AISceneAudioResolver {
+	return &aiSceneAudioResolver{r}
+}
+
+type aiSceneAudioResolver struct{ *Resolver }
+
+func (r *aiSceneAudioResolver) ID(ctx context.Context, obj *AISceneAudio) (string, error) {
+	return fmt.Sprintf("%d", obj.ID), nil
+}
+
+func (r *aiSceneAudioResolver) SceneID(ctx context.Context, obj *AISceneAudio) (string, error) {
+	return fmt.Sprintf("%d", obj.SceneID), nil
+}
+
+func (r *aiSceneAudioResolver) Scene(ctx context.Context, obj *AISceneAudio) (*models.Scene, error) {
+	return obj.Scene, nil
+}
+
+func (r *Resolver) AIPerformerCareer() AIPerformerCareerResolver {
+	return &aiPerformerCareerResolver{r}
+}
+
+type aiPerformerCareerResolver struct{ *Resolver }
+
+func (r *aiPerformerCareerResolver) ID(ctx context.Context, obj *AIPerformerCareer) (string, error) {
+	return fmt.Sprintf("%d", obj.ID), nil
+}
+
+func (r *aiPerformerCareerResolver) PerformerID(ctx context.Context, obj *AIPerformerCareer) (string, error) {
+	return fmt.Sprintf("%d", obj.PerformerID), nil
+}
+
+func (r *aiPerformerCareerResolver) Performer(ctx context.Context, obj *AIPerformerCareer) (*models.Performer, error) {
+	return obj.Performer, nil
+}
+
+func (r *Resolver) AIFileRename() AIFileRenameResolver {
+	return &aiFileRenameResolver{r}
+}
+
+type aiFileRenameResolver struct{ *Resolver }
+
+func (r *aiFileRenameResolver) ID(ctx context.Context, obj *AIFileRename) (string, error) {
+	return fmt.Sprintf("%d", obj.ID), nil
+}
+
+func (r *aiFileRenameResolver) EntityID(ctx context.Context, obj *AIFileRename) (string, error) {
+	return fmt.Sprintf("%d", obj.EntityID), nil
+}
+
+func (r *aiFileRenameResolver) Scene(ctx context.Context, obj *AIFileRename) (*models.Scene, error) {
+	return obj.Scene, nil
+}
+
+func (r *aiFileRenameResolver) Image(ctx context.Context, obj *AIFileRename) (*models.Image, error) {
+	return obj.Image, nil
 }
 
 type mutationResolver struct{ *Resolver }

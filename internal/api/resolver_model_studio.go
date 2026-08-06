@@ -13,6 +13,18 @@ import (
 	"github.com/stashapp/stash/pkg/scene"
 )
 
+func (r *studioResolver) HasEmbedding(ctx context.Context, obj *models.Studio) (bool, error) {
+	var has bool
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		has, err = r.repository.Embedding.HasEmbedding(ctx, "studio", obj.ID)
+		return err
+	}); err != nil {
+		return false, err
+	}
+	return has, nil
+}
+
 func (r *studioResolver) ImagePath(ctx context.Context, obj *models.Studio) (*string, error) {
 	var hasImage bool
 	if err := r.withReadTxn(ctx, func(ctx context.Context) error {

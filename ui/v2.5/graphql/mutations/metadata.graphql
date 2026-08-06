@@ -53,3 +53,27 @@ mutation AnonymiseDatabase($input: AnonymiseDatabaseInput!) {
 mutation OptimiseDatabase {
   optimiseDatabase
 }
+
+mutation MetadataAIImageTag($input: AIImageTagInput!) {
+  metadataAIImageTag(input: $input)
+}
+
+mutation MetadataAIPerformerTag($input: AIPerformerTagInput!) {
+  metadataAIPerformerTag(input: $input)
+}
+
+mutation MetadataAISceneTag($input: AISceneTagInput!) {
+  metadataAISceneTag(input: $input)
+}
+
+mutation MetadataDetectLooping($input: DetectLoopingInput!) {
+  metadataDetectLooping(input: $input)
+}
+
+mutation MetadataAITagOrganize($input: AITagOrganizeInput!) {
+  metadataAITagOrganize(input: $input)
+}
+
+mutation MetadataAIEmbedding($input: AIEmbeddingInput!) {
+  metadataAIEmbedding(input: $input)
+}

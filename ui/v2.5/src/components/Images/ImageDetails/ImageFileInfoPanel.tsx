@@ -10,6 +10,7 @@ import { useToast } from "src/hooks/Toast";
 import TextUtils from "src/utils/text";
 import { TextField, URLField, URLsField } from "src/utils/field";
 import { FileSize } from "src/components/Shared/FileSize";
+import MediaQualityDisplay from "../../Scenes/SceneDetails/MediaQualityDisplay";
 import NavUtils from "src/utils/navigation";
 
 interface IFileInfoPanelProps {
@@ -119,6 +120,8 @@ export const ImageFileInfoPanel: React.FC<IImageFileInfoPanelProps> = (
           <URLsField id="urls" urls={props.image.urls} truncate />
         </dl>
 
+        <MediaQualityDisplay entityType="image" entityID={props.image.id} />
+
         <FileInfoPanel file={props.image.visual_files[0]} />
       </>
     );
@@ -136,32 +139,36 @@ export const ImageFileInfoPanel: React.FC<IImageFileInfoPanelProps> = (
   }
 
   return (
-    <Accordion defaultActiveKey={props.image.visual_files[0].id}>
-      {deletingFile && (
-        <DeleteFilesDialog
-          onClose={() => setDeletingFile(undefined)}
-          selected={[deletingFile]}
-        />
-      )}
-      {props.image.visual_files.map((file, index) => (
-        <Card key={file.id} className="image-file-card">
-          <Accordion.Toggle as={Card.Header} eventKey={file.id}>
-            <TruncatedText text={TextUtils.fileNameFromPath(file.path)} />
-          </Accordion.Toggle>
-          <Accordion.Collapse eventKey={file.id}>
-            <Card.Body>
-              <FileInfoPanel
-                file={file}
-                primary={index === 0}
-                ofMany
-                onSetPrimaryFile={() => onSetPrimaryFile(file.id)}
-                onDeleteFile={() => setDeletingFile(file)}
-                loading={loading}
-              />
-            </Card.Body>
-          </Accordion.Collapse>
-        </Card>
-      ))}
-    </Accordion>
+    <>
+      <MediaQualityDisplay entityType="image" entityID={props.image.id} />
+
+      <Accordion defaultActiveKey={props.image.visual_files[0].id}>
+        {deletingFile && (
+          <DeleteFilesDialog
+            onClose={() => setDeletingFile(undefined)}
+            selected={[deletingFile]}
+          />
+        )}
+        {props.image.visual_files.map((file, index) => (
+          <Card key={file.id} className="image-file-card">
+            <Accordion.Toggle as={Card.Header} eventKey={file.id}>
+              <TruncatedText text={TextUtils.fileNameFromPath(file.path)} />
+            </Accordion.Toggle>
+            <Accordion.Collapse eventKey={file.id}>
+              <Card.Body>
+                <FileInfoPanel
+                  file={file}
+                  primary={index === 0}
+                  ofMany
+                  onSetPrimaryFile={() => onSetPrimaryFile(file.id)}
+                  onDeleteFile={() => setDeletingFile(file)}
+                  loading={loading}
+                />
+              </Card.Body>
+            </Accordion.Collapse>
+          </Card>
+        ))}
+      </Accordion>
+    </>
   );
 };

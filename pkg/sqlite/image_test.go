@@ -12,6 +12,7 @@ import (
 
 	"github.com/stashapp/stash/pkg/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func loadImageRelationships(ctx context.Context, expected models.Image, actual *models.Image) error {
@@ -3133,6 +3134,51 @@ func TestImageQuerySorting(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestImageQuerySortOCountRandom(t *testing.T) {
+	sort := "o_counter_random"
+	direction := models.SortDirectionEnumDesc
+	findFilter := &models.FindFilterType{
+		Sort:      &sort,
+		Direction: &direction,
+	}
+
+	withRollbackTxn(func(ctx context.Context) error {
+		// bucket ordering invariant: o-counts of 2+ must precede counts of
+		// 0 and 1 (which share the low bucket) in DESC order
+		images := queryImages(ctx, t, db.Image, nil, findFilter)
+		require.Greater(t, len(images), 0)
+
+		seenLowBucket := false
+		for _, img := range images {
+			if img.OCounter <= 1 {
+				seenLowBucket = true
+				continue
+			}
+			assert.False(t, seenLowBucket,
+				"image %d with o-count %d must precede low-bucket images in DESC order", img.ID, img.OCounter)
+		}
+
+		// and the opposite in ASC order
+		direction = models.SortDirectionEnumAsc
+		findFilter.Direction = &direction
+
+		images = queryImages(ctx, t, db.Image, nil, findFilter)
+		require.Greater(t, len(images), 0)
+
+		seenHighBucket := false
+		for _, img := range images {
+			if img.OCounter >= 2 {
+				seenHighBucket = true
+				continue
+			}
+			assert.False(t, seenHighBucket,
+				"image %d with o-count %d must precede high-bucket images in ASC order", img.ID, img.OCounter)
+		}
+
+		return nil
+	})
 }
 
 func TestImageQueryPagination(t *testing.T) {

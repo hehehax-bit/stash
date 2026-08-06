@@ -12,6 +12,18 @@ import (
 	"github.com/stashapp/stash/pkg/performer"
 )
 
+func (r *performerResolver) HasEmbedding(ctx context.Context, obj *models.Performer) (bool, error) {
+	var has bool
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		has, err = r.repository.Embedding.HasEmbedding(ctx, "performer", obj.ID)
+		return err
+	}); err != nil {
+		return false, err
+	}
+	return has, nil
+}
+
 func (r *performerResolver) AliasList(ctx context.Context, obj *models.Performer) ([]string, error) {
 	if !obj.Aliases.Loaded() {
 		if err := r.withReadTxn(ctx, func(ctx context.Context) error {

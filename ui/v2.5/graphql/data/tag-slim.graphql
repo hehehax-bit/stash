@@ -6,6 +6,7 @@ fragment SlimTagData on Tag {
   image_path
   parent_count
   child_count
+  has_embedding
 
   stash_ids {
     endpoint

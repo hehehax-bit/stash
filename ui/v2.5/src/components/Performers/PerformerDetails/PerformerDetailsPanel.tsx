@@ -16,6 +16,7 @@ import {
 } from "../PerformerList";
 import { PatchComponent } from "src/patch";
 import { CustomFields } from "src/components/Shared/CustomFields";
+import PerformerCareerDisplay from "./PerformerCareerDisplay";
 
 interface IPerformerDetails {
   performer: GQL.PerformerDataFragment;
@@ -188,6 +189,7 @@ export const PerformerDetailsPanel: React.FC<IPerformerDetails> =
           value={renderStashIDs()}
           fullWidth={fullWidth}
         />
+        <PerformerCareerDisplay performerID={performer.id} />
         {(fullWidth || !collapsed) && (
           <CustomFields values={performer.custom_fields} />
         )}

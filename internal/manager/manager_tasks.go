@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 	"github.com/stashapp/stash/pkg/job"
 	"github.com/stashapp/stash/pkg/logger"
 	"github.com/stashapp/stash/pkg/models"
+	"github.com/stashapp/stash/pkg/tag"
 )
 
 func useAsVideo(pathname string) bool {
@@ -220,6 +223,922 @@ func (s *Manager) RunSingleTask(ctx context.Context, t Task) int {
 	})
 
 	return s.JobManager.Add(ctx, t.GetDescription(), j)
+}
+
+func (s *Manager) AIImageTag(ctx context.Context, input AIImageTagInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAIImageTagJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Tagging Images...", "ai", j), nil
+}
+
+func (s *Manager) AIPerformerTag(ctx context.Context, input AIPerformerTagInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAIPerformerTagJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Tagging Performer...", "ai", j), nil
+}
+
+func (s *Manager) AISceneTag(ctx context.Context, input AISceneTagInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAISceneTagJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Tagging Scenes...", "ai", j), nil
+}
+
+func (s *Manager) DetectLooping(ctx context.Context, input DetectLoopingInput) int {
+	j := CreateDetectLoopingJob(input)
+	return s.JobManager.AddWithType(ctx, "Detecting Looping Videos...", "ai", j)
+}
+
+func (s *Manager) AITagOrganize(ctx context.Context, input AITagOrganizeInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAITagOrganizeJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Organizing Tags...", "ai", j), nil
+}
+
+func (s *Manager) AIPerformerCluster(ctx context.Context, input AIPerformerClusterInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAIPerformerClusterJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Clustering Performers...", "ai", j), nil
+}
+
+func (s *Manager) AIPerformerMergeSuggest(ctx context.Context, input AIPerformerMergeSuggestInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAIPerformerMergeSuggestJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Suggesting Performer Merges...", "ai", j), nil
+}
+
+func (s *Manager) AIPerformerSuggestionApply(ctx context.Context, suggestionID int64) error {
+	if !instance.Config.GetAIEnabled() {
+		return fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	r := instance.Repository
+
+	var suggestion *models.AIPerformerSuggestion
+	if err := r.WithReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		suggestion, err = r.AIPerformerSuggestion.FindByID(ctx, suggestionID)
+		return err
+	}); err != nil {
+		return fmt.Errorf("finding suggestion: %w", err)
+	}
+	if suggestion == nil {
+		return fmt.Errorf("suggestion %d not found", suggestionID)
+	}
+	if suggestion.Status != models.SuggestionStatusPending {
+		return fmt.Errorf("suggestion %d is not pending", suggestionID)
+	}
+
+	if err := r.WithTxn(ctx, func(ctx context.Context) error {
+		if err := r.Performer.Merge(ctx, []int{suggestion.SourcePerformerID}, suggestion.TargetPerformerID); err != nil {
+			return err
+		}
+		return r.AIPerformerSuggestion.UpdateStatus(ctx, suggestionID, models.SuggestionStatusAccepted)
+	}); err != nil {
+		return fmt.Errorf("merging performers: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Manager) AIPerformerDiscovery(ctx context.Context, input AIPerformerDiscoveryInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAIPerformerDiscoveryJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Discovering Performers...", "ai", j), nil
+}
+
+// AIPerformerCandidateApply creates a performer from the candidate (or attaches
+// its members to an existing target performer) and marks the candidate applied.
+func (s *Manager) AIPerformerCandidateApply(ctx context.Context, candidateID int64, targetPerformerID *int) error {
+	if !instance.Config.GetAIEnabled() {
+		return fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	r := instance.Repository
+
+	var candidate *models.AIPerformerCandidate
+	if err := r.WithReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		candidate, err = r.AIPerformerCandidate.FindByID(ctx, candidateID)
+		return err
+	}); err != nil {
+		return fmt.Errorf("finding candidate: %w", err)
+	}
+	if candidate == nil {
+		return fmt.Errorf("candidate %d not found", candidateID)
+	}
+	if candidate.Status != models.SuggestionStatusPending {
+		return fmt.Errorf("candidate %d is not pending", candidateID)
+	}
+
+	performerID := 0
+	if err := r.WithTxn(ctx, func(ctx context.Context) error {
+		if targetPerformerID != nil && *targetPerformerID > 0 {
+			performerID = *targetPerformerID
+		} else {
+			newPerformer := models.NewPerformer()
+			newPerformer.Name = candidate.Name
+			if err := r.Performer.Create(ctx, &models.CreatePerformerInput{Performer: &newPerformer}); err != nil {
+				return fmt.Errorf("creating performer: %w", err)
+			}
+			performerID = newPerformer.ID
+		}
+
+		for _, memberID := range candidate.MemberIDs {
+			if err := attachCandidateMember(ctx, r, candidate.EntityType, memberID, performerID); err != nil {
+				logger.Warnf("Error attaching member %d to performer %d: %v", memberID, performerID, err)
+			}
+		}
+
+		return r.AIPerformerCandidate.UpdateStatus(ctx, candidateID, models.SuggestionStatusAccepted)
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Manager) AIPerformerCandidateReject(ctx context.Context, candidateID int64) error {
+	return instance.Repository.WithTxn(ctx, func(ctx context.Context) error {
+		return instance.Repository.AIPerformerCandidate.UpdateStatus(ctx, candidateID, models.SuggestionStatusRejected)
+	})
+}
+
+func attachCandidateMember(ctx context.Context, r models.Repository, entityType string, entityID, performerID int) error {
+	update := &models.UpdateIDs{
+		IDs:  []int{performerID},
+		Mode: models.RelationshipUpdateModeAdd,
+	}
+
+	switch entityType {
+	case entityTypeScene:
+		partial := models.NewScenePartial()
+		partial.PerformerIDs = update
+		_, err := r.Scene.UpdatePartial(ctx, entityID, partial)
+		return err
+	case entityTypeImage:
+		partial := models.NewImagePartial()
+		partial.PerformerIDs = update
+		_, err := r.Image.UpdatePartial(ctx, entityID, partial)
+		return err
+	}
+	return nil
+}
+
+func (s *Manager) AITranslate(ctx context.Context, input AITranslateInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAITranslateJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Translating Library...", "ai", j), nil
+}
+
+func (s *Manager) AITranslationApply(ctx context.Context, translationID int64) error {
+	if !instance.Config.GetAIEnabled() {
+		return fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	r := instance.Repository
+
+	var translation *models.AITranslation
+	if err := r.WithReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		translation, err = r.AITranslation.FindByID(ctx, translationID)
+		return err
+	}); err != nil {
+		return fmt.Errorf("finding translation: %w", err)
+	}
+	if translation == nil {
+		return fmt.Errorf("translation %d not found", translationID)
+	}
+	if translation.Status != models.SuggestionStatusPending {
+		return fmt.Errorf("translation %d is not pending", translationID)
+	}
+
+	if err := r.WithTxn(ctx, func(ctx context.Context) error {
+		if err := applyTranslationToEntity(ctx, r, translation); err != nil {
+			return err
+		}
+		return r.AITranslation.UpdateStatus(ctx, translationID, models.SuggestionStatusAccepted)
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Manager) AITranslationReject(ctx context.Context, translationID int64) error {
+	return instance.Repository.WithTxn(ctx, func(ctx context.Context) error {
+		return instance.Repository.AITranslation.UpdateStatus(ctx, translationID, models.SuggestionStatusRejected)
+	})
+}
+
+func applyTranslationToEntity(ctx context.Context, r models.Repository, translation *models.AITranslation) error {
+	switch translation.EntityType {
+	case entityTypeScene:
+		partial := models.NewScenePartial()
+		if translation.Field == "title" {
+			partial.Title = models.NewOptionalString(translation.TranslatedText)
+		} else if translation.Field == "details" {
+			partial.Details = models.NewOptionalString(translation.TranslatedText)
+		}
+		_, err := r.Scene.UpdatePartial(ctx, translation.EntityID, partial)
+		return err
+	case entityTypeImage:
+		partial := models.NewImagePartial()
+		if translation.Field == "title" {
+			partial.Title = models.NewOptionalString(translation.TranslatedText)
+		} else if translation.Field == "details" {
+			partial.Details = models.NewOptionalString(translation.TranslatedText)
+		}
+		_, err := r.Image.UpdatePartial(ctx, translation.EntityID, partial)
+		return err
+	case entityTypePerformer:
+		partial := models.NewPerformerPartial()
+		if translation.Field == "name" {
+			partial.Name = models.NewOptionalString(translation.TranslatedText)
+		} else if translation.Field == "details" {
+			partial.Details = models.NewOptionalString(translation.TranslatedText)
+		}
+		_, err := r.Performer.UpdatePartial(ctx, translation.EntityID, partial)
+		return err
+	}
+	return nil
+}
+
+func (s *Manager) AIAudit(ctx context.Context, input AIAuditInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAIAuditJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Auditing Scenes and Images...", "ai", j), nil
+}
+
+func (s *Manager) AIAuditApply(ctx context.Context, auditID int64) error {
+	if !instance.Config.GetAIEnabled() {
+		return fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	r := instance.Repository
+
+	var audit *models.AIAudit
+	if err := r.WithReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		audit, err = r.AIAudit.FindByID(ctx, auditID)
+		return err
+	}); err != nil {
+		return fmt.Errorf("finding audit: %w", err)
+	}
+	if audit == nil {
+		return fmt.Errorf("audit %d not found", auditID)
+	}
+	if audit.Status != models.SuggestionStatusPending {
+		return fmt.Errorf("audit %d is not pending", auditID)
+	}
+
+	if err := r.WithTxn(ctx, func(ctx context.Context) error {
+		switch audit.Field {
+		case "title", "details":
+			if err := applyAuditTextField(ctx, r, audit); err != nil {
+				return err
+			}
+		case "performers":
+			resolver := &performerResolver{r: r}
+			performerID, err := resolver.resolve(ctx, audit.AIValue, true, nil)
+			if err != nil {
+				return fmt.Errorf("resolving performer %q: %w", audit.AIValue, err)
+			}
+			if performerID > 0 {
+				if err := attachPerformerToAuditEntity(ctx, r, audit, performerID); err != nil {
+					return err
+				}
+			}
+		}
+		return r.AIAudit.UpdateStatus(ctx, auditID, models.SuggestionStatusAccepted)
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Manager) AIAuditReject(ctx context.Context, auditID int64) error {
+	return instance.Repository.WithTxn(ctx, func(ctx context.Context) error {
+		return instance.Repository.AIAudit.UpdateStatus(ctx, auditID, models.SuggestionStatusRejected)
+	})
+}
+
+func applyAuditTextField(ctx context.Context, r models.Repository, audit *models.AIAudit) error {
+	switch audit.EntityType {
+	case entityTypeScene:
+		partial := models.NewScenePartial()
+		if audit.Field == "title" {
+			partial.Title = models.NewOptionalString(audit.AIValue)
+		} else {
+			partial.Details = models.NewOptionalString(audit.AIValue)
+		}
+		_, err := r.Scene.UpdatePartial(ctx, audit.EntityID, partial)
+		return err
+	case entityTypeImage:
+		partial := models.NewImagePartial()
+		if audit.Field == "title" {
+			partial.Title = models.NewOptionalString(audit.AIValue)
+		} else {
+			partial.Details = models.NewOptionalString(audit.AIValue)
+		}
+		_, err := r.Image.UpdatePartial(ctx, audit.EntityID, partial)
+		return err
+	}
+	return nil
+}
+
+func attachPerformerToAuditEntity(ctx context.Context, r models.Repository, audit *models.AIAudit, performerID int) error {
+	update := &models.UpdateIDs{
+		IDs:  []int{performerID},
+		Mode: models.RelationshipUpdateModeAdd,
+	}
+
+	switch audit.EntityType {
+	case entityTypeScene:
+		partial := models.NewScenePartial()
+		partial.PerformerIDs = update
+		_, err := r.Scene.UpdatePartial(ctx, audit.EntityID, partial)
+		return err
+	case entityTypeImage:
+		partial := models.NewImagePartial()
+		partial.PerformerIDs = update
+		_, err := r.Image.UpdatePartial(ctx, audit.EntityID, partial)
+		return err
+	}
+	return nil
+}
+
+func (s *Manager) AIPerformerSuggestionReject(ctx context.Context, suggestionID int64) error {
+	return instance.Repository.WithTxn(ctx, func(ctx context.Context) error {
+		return instance.Repository.AIPerformerSuggestion.UpdateStatus(ctx, suggestionID, models.SuggestionStatusRejected)
+	})
+}
+
+func (s *Manager) AIAuditApplyAll(ctx context.Context) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+	r := instance.Repository
+
+	var pending []*models.AIAudit
+	if err := r.WithReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		pending, err = r.AIAudit.FindByStatus(ctx, models.SuggestionStatusPending)
+		return err
+	}); err != nil {
+		return 0, err
+	}
+
+	applied := 0
+	for _, a := range pending {
+		if err := s.AIAuditApply(ctx, a.ID); err != nil {
+			logger.Warnf("Error applying audit %d: %v", a.ID, err)
+			continue
+		}
+		applied++
+	}
+	logger.Infof("AI audit apply-all: %d applied of %d pending", applied, len(pending))
+	return applied, nil
+}
+
+func (s *Manager) AIAuditRejectAll(ctx context.Context) (int, error) {
+	return rejectAll(ctx, rAIAuditRejectAll)
+}
+
+func (s *Manager) AITranslationApplyAll(ctx context.Context) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+	r := instance.Repository
+
+	var pending []*models.AITranslation
+	if err := r.WithReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		pending, err = r.AITranslation.FindByStatus(ctx, models.SuggestionStatusPending)
+		return err
+	}); err != nil {
+		return 0, err
+	}
+
+	applied := 0
+	for _, t := range pending {
+		if err := s.AITranslationApply(ctx, t.ID); err != nil {
+			logger.Warnf("Error applying translation %d: %v", t.ID, err)
+			continue
+		}
+		applied++
+	}
+	logger.Infof("AI translation apply-all: %d applied of %d pending", applied, len(pending))
+	return applied, nil
+}
+
+func (s *Manager) AITranslationRejectAll(ctx context.Context) (int, error) {
+	return rejectAll(ctx, rAITranslationRejectAll)
+}
+
+func (s *Manager) AIPerformerSuggestionApplyAll(ctx context.Context) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+	r := instance.Repository
+
+	var pending []*models.AIPerformerSuggestion
+	if err := r.WithReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		pending, err = r.AIPerformerSuggestion.FindByStatus(ctx, models.SuggestionStatusPending)
+		return err
+	}); err != nil {
+		return 0, err
+	}
+
+	applied := 0
+	for _, a := range pending {
+		if err := s.AIPerformerSuggestionApply(ctx, a.ID); err != nil {
+			logger.Warnf("Error applying merge suggestion %d: %v", a.ID, err)
+			continue
+		}
+		applied++
+	}
+	logger.Infof("AI merge suggestion apply-all: %d applied of %d pending", applied, len(pending))
+	return applied, nil
+}
+
+func (s *Manager) AIPerformerSuggestionRejectAll(ctx context.Context) (int, error) {
+	return rejectAll(ctx, rAIPerformerSuggestionRejectAll)
+}
+
+func (s *Manager) AIPerformerCandidateApplyAll(ctx context.Context) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+	r := instance.Repository
+
+	var pending []*models.AIPerformerCandidate
+	if err := r.WithReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		pending, err = r.AIPerformerCandidate.FindByStatus(ctx, models.SuggestionStatusPending)
+		return err
+	}); err != nil {
+		return 0, err
+	}
+
+	applied := 0
+	for _, c := range pending {
+		if err := s.AIPerformerCandidateApply(ctx, c.ID, nil); err != nil {
+			logger.Warnf("Error applying candidate %d: %v", c.ID, err)
+			continue
+		}
+		applied++
+	}
+	logger.Infof("AI candidate apply-all: %d applied of %d pending", applied, len(pending))
+	return applied, nil
+}
+
+func (s *Manager) AIPerformerCandidateRejectAll(ctx context.Context) (int, error) {
+	return rejectAll(ctx, rAIPerformerCandidateRejectAll)
+}
+
+type rejectAllFunc func(context.Context, models.Repository) (int64, error)
+
+func rejectAll(ctx context.Context, fn rejectAllFunc) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+	r := instance.Repository
+
+	var count int64
+	if err := r.WithTxn(ctx, func(ctx context.Context) error {
+		var err error
+		count, err = fn(ctx, r)
+		return err
+	}); err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
+func rAIAuditRejectAll(ctx context.Context, r models.Repository) (int64, error) {
+	return r.AIAudit.UpdateStatusByStatus(ctx, models.SuggestionStatusPending, models.SuggestionStatusRejected)
+}
+
+func rAITranslationRejectAll(ctx context.Context, r models.Repository) (int64, error) {
+	return r.AITranslation.UpdateStatusByStatus(ctx, models.SuggestionStatusPending, models.SuggestionStatusRejected)
+}
+
+func rAIPerformerSuggestionRejectAll(ctx context.Context, r models.Repository) (int64, error) {
+	return r.AIPerformerSuggestion.UpdateStatusByStatus(ctx, models.SuggestionStatusPending, models.SuggestionStatusRejected)
+}
+
+func rAIPerformerCandidateRejectAll(ctx context.Context, r models.Repository) (int64, error) {
+	return r.AIPerformerCandidate.UpdateStatusByStatus(ctx, models.SuggestionStatusPending, models.SuggestionStatusRejected)
+}
+
+func (s *Manager) AISceneSegment(ctx context.Context, input AISceneSegmentInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAISceneSegmentJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Segmenting Scenes...", "ai", j), nil
+}
+
+func (s *Manager) AISuggestionGenerate(ctx context.Context, input AISuggestionInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAISuggestionJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Generating Suggestions...", "ai", j), nil
+}
+
+func (s *Manager) AIMediaQuality(ctx context.Context, input AIMediaQualityInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAIMediaQualityJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Assessing Media Quality...", "ai", j), nil
+}
+
+func (s *Manager) AIAudioAnalyze(ctx context.Context, input AIAudioAnalyzeInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAIAudioAnalyzeJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Analyzing Scene Audio...", "ai", j), nil
+}
+
+func (s *Manager) AIPerformerCareer(ctx context.Context, input AIPerformerCareerInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAIPerformerCareerJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Analyzing Performer Careers...", "ai", j), nil
+}
+
+func (s *Manager) AISmartCollections(ctx context.Context, input AISmartCollectionsInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAISmartCollectionsJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Generating Smart Collections...", "ai", j), nil
+}
+
+func (s *Manager) AIFileRenameGenerate(ctx context.Context, input AIFileRenameInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	j := CreateAIFileRenameJob(input)
+	return s.JobManager.AddWithType(ctx, "AI Suggesting Filenames...", "ai", j), nil
+}
+
+// AIFileRenameApply renames the file on disk and updates the database, then
+// marks the rename suggestion as applied. Returns an error if the suggestion
+// is not pending.
+func (s *Manager) AIFileRenameApply(ctx context.Context, renameID int64) error {
+	var rename *models.AIFileRename
+	if err := s.Repository.WithReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		rename, err = s.Repository.AIFileRename.FindByID(ctx, renameID)
+		return err
+	}); err != nil {
+		return err
+	}
+
+	if rename == nil {
+		return fmt.Errorf("rename suggestion not found: %d", renameID)
+	}
+
+	if rename.Status != models.FileRenameStatusPending {
+		return fmt.Errorf("rename suggestion %d is not pending (status %q)", renameID, rename.Status)
+	}
+
+	return s.Repository.WithTxn(ctx, func(ctx context.Context) error {
+		file, err := s.entityPrimaryFile(ctx, rename)
+		if err != nil {
+			return err
+		}
+
+		oldPath := file.Base().Path
+		oldName := filepath.Base(oldPath)
+		newName := rename.SuggestedName + filepath.Ext(oldName)
+		newPath := filepath.Join(filepath.Dir(oldPath), newName)
+
+		if newPath == oldPath {
+			return fmt.Errorf("suggested name %q is the same as the current name", rename.SuggestedName)
+		}
+		exists, err := fsutil.FileExists(newPath)
+		if err != nil {
+			return fmt.Errorf("checking destination %q: %w", newPath, err)
+		}
+		if exists {
+			return fmt.Errorf("destination already exists: %q", newPath)
+		}
+		if err := fsutil.SafeMove(oldPath, newPath); err != nil {
+			return fmt.Errorf("renaming %q to %q: %w", oldPath, newPath, err)
+		}
+
+		base := file.Base()
+		base.Basename = newName
+		base.Path = newPath
+		if err := s.Repository.File.Update(ctx, file); err != nil {
+			// try to roll back the file move
+			_ = fsutil.SafeMove(newPath, oldPath)
+			return fmt.Errorf("updating file record: %w", err)
+		}
+
+		return s.Repository.AIFileRename.UpdateStatus(ctx, renameID, models.FileRenameStatusApplied)
+	})
+}
+
+// AIFileRenameReject marks the given rename suggestion as rejected.
+func (s *Manager) AIFileRenameReject(ctx context.Context, renameID int64) error {
+	var rename *models.AIFileRename
+	if err := s.Repository.WithReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		rename, err = s.Repository.AIFileRename.FindByID(ctx, renameID)
+		return err
+	}); err != nil {
+		return err
+	}
+
+	if rename == nil {
+		return fmt.Errorf("rename suggestion not found: %d", renameID)
+	}
+
+	if rename.Status != models.FileRenameStatusPending {
+		return fmt.Errorf("rename suggestion %d is not pending (status %q)", renameID, rename.Status)
+	}
+
+	return s.Repository.WithTxn(ctx, func(ctx context.Context) error {
+		return s.Repository.AIFileRename.UpdateStatus(ctx, renameID, models.FileRenameStatusRejected)
+	})
+}
+
+func (s *Manager) entityPrimaryFile(ctx context.Context, rename *models.AIFileRename) (models.File, error) {
+	switch rename.EntityType {
+	case entityTypeScene:
+		sc, err := s.Repository.Scene.Find(ctx, rename.EntityID)
+		if err != nil {
+			return nil, err
+		}
+		if sc == nil {
+			return nil, fmt.Errorf("scene not found: %d", rename.EntityID)
+		}
+		if err := sc.LoadPrimaryFile(ctx, s.Repository.File); err != nil {
+			return nil, err
+		}
+		f := sc.Files.Primary()
+		if f == nil {
+			return nil, fmt.Errorf("scene %d has no file", rename.EntityID)
+		}
+		return f, nil
+	case entityTypeImage:
+		img, err := s.Repository.Image.Find(ctx, rename.EntityID)
+		if err != nil {
+			return nil, err
+		}
+		if img == nil {
+			return nil, fmt.Errorf("image not found: %d", rename.EntityID)
+		}
+		if err := img.LoadPrimaryFile(ctx, s.Repository.File); err != nil {
+			return nil, err
+		}
+		f := img.Files.Primary()
+		if f == nil {
+			return nil, fmt.Errorf("image %d has no file", rename.EntityID)
+		}
+		return f, nil
+	default:
+		return nil, fmt.Errorf("unsupported entity type %q", rename.EntityType)
+	}
+}
+
+// AISuggestionApply applies the given suggestion to its target entity and marks
+// it accepted. Returns an error if the suggestion is not pending.
+func (s *Manager) AISuggestionApply(ctx context.Context, suggestionID int64) error {
+	var suggestion *models.AISuggestion
+	if err := s.Repository.WithReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		suggestion, err = s.Repository.AISuggestion.FindByID(ctx, suggestionID)
+		return err
+	}); err != nil {
+		return err
+	}
+
+	if suggestion == nil {
+		return fmt.Errorf("suggestion not found: %d", suggestionID)
+	}
+
+	if suggestion.Status != models.SuggestionStatusPending {
+		return fmt.Errorf("suggestion %d is not pending (status %q)", suggestionID, suggestion.Status)
+	}
+
+	switch suggestion.EntityType {
+	case entityTypeScene:
+		return s.applySceneSuggestion(ctx, suggestion)
+	case entityTypeImage:
+		return s.applyImageSuggestion(ctx, suggestion)
+	default:
+		return fmt.Errorf("unsupported entity type %q", suggestion.EntityType)
+	}
+}
+
+// AISuggestionReject marks the given suggestion as rejected.
+func (s *Manager) AISuggestionReject(ctx context.Context, suggestionID int64) error {
+	var suggestion *models.AISuggestion
+	if err := s.Repository.WithReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		suggestion, err = s.Repository.AISuggestion.FindByID(ctx, suggestionID)
+		return err
+	}); err != nil {
+		return err
+	}
+
+	if suggestion == nil {
+		return fmt.Errorf("suggestion not found: %d", suggestionID)
+	}
+
+	if suggestion.Status != models.SuggestionStatusPending {
+		return fmt.Errorf("suggestion %d is not pending (status %q)", suggestionID, suggestion.Status)
+	}
+
+	return s.Repository.WithTxn(ctx, func(ctx context.Context) error {
+		return s.Repository.AISuggestion.UpdateStatus(ctx, suggestionID, models.SuggestionStatusRejected)
+	})
+}
+
+func (s *Manager) applySceneSuggestion(ctx context.Context, suggestion *models.AISuggestion) error {
+	return s.Repository.WithTxn(ctx, func(ctx context.Context) error {
+		// Resolve performer IDs
+		resolver := &performerResolver{r: s.Repository}
+		var performerIDs []int
+		for _, name := range suggestion.Performers {
+			name = strings.TrimSpace(name)
+			if name == "" {
+				continue
+			}
+			performerID, err := resolver.resolve(ctx, name, true, nil)
+			if err != nil {
+				return fmt.Errorf("resolving performer %q: %w", name, err)
+			}
+			if performerID > 0 {
+				performerIDs = append(performerIDs, performerID)
+			}
+		}
+
+		// Resolve tag IDs
+		tagIDs, err := s.resolveTagIDs(ctx, suggestion.Tags)
+		if err != nil {
+			return err
+		}
+
+		partial := models.NewScenePartial()
+		if suggestion.Title != "" {
+			partial.Title = models.NewOptionalString(suggestion.Title)
+		}
+		if suggestion.Details != "" {
+			partial.Details = models.NewOptionalString(suggestion.Details)
+		}
+		if len(performerIDs) > 0 {
+			partial.PerformerIDs = &models.UpdateIDs{
+				IDs:  performerIDs,
+				Mode: models.RelationshipUpdateModeAdd,
+			}
+		}
+		if len(tagIDs) > 0 {
+			partial.TagIDs = &models.UpdateIDs{
+				IDs:  tagIDs,
+				Mode: models.RelationshipUpdateModeAdd,
+			}
+		}
+
+		if _, err := s.Repository.Scene.UpdatePartial(ctx, suggestion.EntityID, partial); err != nil {
+			return err
+		}
+
+		return s.Repository.AISuggestion.UpdateStatus(ctx, suggestion.ID, models.SuggestionStatusAccepted)
+	})
+}
+
+func (s *Manager) applyImageSuggestion(ctx context.Context, suggestion *models.AISuggestion) error {
+	return s.Repository.WithTxn(ctx, func(ctx context.Context) error {
+		// Resolve performer IDs
+		resolver := &performerResolver{r: s.Repository}
+		var performerIDs []int
+		for _, name := range suggestion.Performers {
+			name = strings.TrimSpace(name)
+			if name == "" {
+				continue
+			}
+			performerID, err := resolver.resolve(ctx, name, true, nil)
+			if err != nil {
+				return fmt.Errorf("resolving performer %q: %w", name, err)
+			}
+			if performerID > 0 {
+				performerIDs = append(performerIDs, performerID)
+			}
+		}
+
+		tagIDs, err := s.resolveTagIDs(ctx, suggestion.Tags)
+		if err != nil {
+			return err
+		}
+
+		partial := models.NewImagePartial()
+		if suggestion.Title != "" {
+			partial.Title = models.NewOptionalString(suggestion.Title)
+		}
+		if suggestion.Details != "" {
+			partial.Details = models.NewOptionalString(suggestion.Details)
+		}
+		if len(performerIDs) > 0 {
+			partial.PerformerIDs = &models.UpdateIDs{
+				IDs:  performerIDs,
+				Mode: models.RelationshipUpdateModeAdd,
+			}
+		}
+		if len(tagIDs) > 0 {
+			partial.TagIDs = &models.UpdateIDs{
+				IDs:  tagIDs,
+				Mode: models.RelationshipUpdateModeAdd,
+			}
+		}
+
+		if _, err := s.Repository.Image.UpdatePartial(ctx, suggestion.EntityID, partial); err != nil {
+			return err
+		}
+
+		return s.Repository.AISuggestion.UpdateStatus(ctx, suggestion.ID, models.SuggestionStatusAccepted)
+	})
+}
+
+func (s *Manager) resolveTagIDs(ctx context.Context, names []string) ([]int, error) {
+	var tagIDs []int
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		t, err := tag.ByName(ctx, s.Repository.Tag, name)
+		if err != nil {
+			return nil, fmt.Errorf("finding tag %q: %w", name, err)
+		}
+		if t != nil {
+			tagIDs = append(tagIDs, t.ID)
+			continue
+		}
+		newTag := models.NewTag()
+		newTag.Name = name
+		if err := s.Repository.Tag.Create(ctx, &models.CreateTagInput{Tag: &newTag}); err != nil {
+			return nil, fmt.Errorf("creating tag %q: %w", name, err)
+		}
+		tagIDs = append(tagIDs, newTag.ID)
+	}
+	return tagIDs, nil
+}
+
+func (s *Manager) AIEmbedding(ctx context.Context, input AIEmbeddingInput) (int, error) {
+	if !instance.Config.GetAIEnabled() {
+		return 0, fmt.Errorf("AI is not enabled. Enable it in Settings > AI")
+	}
+
+	logger.Infof("Creating embedding job with input: %+v", input)
+	j := CreateAIEmbeddingJob(input)
+	jobID := s.JobManager.AddWithType(ctx, "AI Generating Embeddings...", "ai", j)
+	logger.Infof("Created embedding job with ID: %d", jobID)
+	return jobID, nil
 }
 
 func (s *Manager) Generate(ctx context.Context, input GenerateMetadataInput) (int, error) {

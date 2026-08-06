@@ -18,6 +18,7 @@ import {
   useListSceneScrapers,
   mutateReloadScrapers,
   queryScrapeSceneQueryFragment,
+  mutateMetadataDetectLooping,
 } from "src/core/StashService";
 import { Icon } from "src/components/Shared/Icon";
 import { LoadingIndicator } from "src/components/Shared/LoadingIndicator";
@@ -63,6 +64,9 @@ import cloneDeep from "lodash-es/cloneDeep";
 
 const SceneScrapeDialog = lazyComponent(() => import("./SceneScrapeDialog"));
 const SceneQueryModal = lazyComponent(() => import("./SceneQueryModal"));
+const AITagContextDialog = lazyComponent(
+  () => import("src/components/Dialogs/AITagContextDialog/AITagContextDialog")
+);
 
 interface IProps {
   scene: Partial<GQL.SceneDataFragment>;
@@ -92,6 +96,23 @@ export const SceneEditPanel: React.FC<IProps> = ({
   const [performers, setPerformers] = useState<Performer[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [studio, setStudio] = useState<Studio | null>(null);
+  const [isAITagDialogOpen, setIsAITagDialogOpen] = useState(false);
+
+  async function onDetectLoop() {
+    if (!scene.id) return;
+
+    try {
+      await mutateMetadataDetectLooping({ sceneIds: [scene.id] });
+      Toast.success(
+        intl.formatMessage(
+          { id: "config.tasks.added_job_to_queue" },
+          { operation_name: "Detect Looping Videos" }
+        )
+      );
+    } catch (e) {
+      Toast.error(e);
+    }
+  }
 
   const Scrapers = useListSceneScrapers();
 
@@ -143,6 +164,7 @@ export const SceneEditPanel: React.FC<IProps> = ({
   }, [scene.studio]);
 
   const { configuration: stashConfig } = useConfigurationContext();
+  const { data: aiConfig } = GQL.useAiConfigQuery();
 
   // Network state
   const [isLoading, setIsLoading] = useState(false);
@@ -778,6 +800,13 @@ export const SceneEditPanel: React.FC<IProps> = ({
 
       {renderScrapeQueryModal()}
       {maybeRenderScrapeDialog()}
+      {isAITagDialogOpen && (
+        <AITagContextDialog
+          entityType="scene"
+          entityId={scene.id!}
+          onClose={() => setIsAITagDialogOpen(false)}
+        />
+      )}
       {isStashIDSearchOpen && (
         <StashBoxIDSearchModal
           entityType="scene"
@@ -837,6 +866,17 @@ export const SceneEditPanel: React.FC<IProps> = ({
           {!isNew && (
             <div className="ml-auto text-right d-flex">
               <ButtonGroup className="scraper-group">
+                {aiConfig?.aiConfig?.enabled && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setIsAITagDialogOpen(true)}
+                  >
+                    AI Tag
+                  </Button>
+                )}
+                <Button variant="secondary" onClick={() => onDetectLoop()}>
+                  Detect Loop
+                </Button>
                 <ScraperMenu
                   toggle={intl.formatMessage({ id: "actions.scrape_with" })}
                   stashBoxes={stashConfig?.general.stashBoxes ?? []}

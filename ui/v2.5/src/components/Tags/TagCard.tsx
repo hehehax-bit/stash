@@ -9,6 +9,7 @@ import { TruncatedText } from "../Shared/TruncatedText";
 import { GridCard } from "../Shared/GridCard/GridCard";
 import { PopoverCountButton } from "../Shared/PopoverCountButton";
 import { Icon } from "../Shared/Icon";
+import { EmbeddingBadge } from "../Shared/EmbeddingBadge";
 import { faHeart } from "@fortawesome/free-solid-svg-icons";
 import cx from "classnames";
 import { useTagUpdate } from "src/core/StashService";
@@ -213,12 +214,15 @@ const TagCardImage: React.FC<IProps> = PatchComponent(
   "TagCard.Image",
   ({ tag }) => {
     return (
-      <img
-        loading="lazy"
-        className="tag-card-image"
-        alt={tag.name}
-        src={tag.image_path ?? ""}
-      />
+      <>
+        <img
+          loading="lazy"
+          className="tag-card-image"
+          alt={tag.name}
+          src={tag.image_path ?? ""}
+        />
+        {tag.has_embedding && <EmbeddingBadge />}
+      </>
     );
   }
 );

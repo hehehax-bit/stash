@@ -3,6 +3,7 @@ fragment JobData on Job {
   status
   subTasks
   description
+  type
   progress
   startTime
   endTime

@@ -255,6 +255,7 @@ export const ScenePlayer: React.FC<IScenePlayerProps> = PatchComponent(
 
     const [time, setTime] = useState(0);
     const [ready, setReady] = useState(false);
+    const [currentSourceIsDirect, setCurrentSourceIsDirect] = useState(true);
 
     const {
       interactive: interactiveClient,
@@ -521,6 +522,37 @@ export const ScenePlayer: React.FC<IScenePlayerProps> = PatchComponent(
 
       function loadstart(this: VideoJsPlayer) {
         setReady(true);
+
+        // track whether current source is direct (for server-side loop handling)
+        const src = this.currentSrc();
+        if (src) {
+          try {
+            const pathname = new URL(src, window.location.origin).pathname;
+            setCurrentSourceIsDirect(
+              pathname.endsWith("/stream") ||
+                pathname.endsWith("/stream.mpd") ||
+                pathname.endsWith("/stream.m3u8")
+            );
+          } catch {
+            setCurrentSourceIsDirect(true);
+          }
+        }
+      }
+
+      function sourceset(this: VideoJsPlayer) {
+        const src = this.currentSrc();
+        if (src) {
+          try {
+            const pathname = new URL(src, window.location.origin).pathname;
+            setCurrentSourceIsDirect(
+              pathname.endsWith("/stream") ||
+                pathname.endsWith("/stream.mpd") ||
+                pathname.endsWith("/stream.m3u8")
+            );
+          } catch {
+            setCurrentSourceIsDirect(true);
+          }
+        }
       }
 
       function fullscreenchange(this: VideoJsPlayer) {
@@ -530,12 +562,14 @@ export const ScenePlayer: React.FC<IScenePlayerProps> = PatchComponent(
       player.on("canplay", canplay);
       player.on("playing", playing);
       player.on("loadstart", loadstart);
+      player.on("sourceset", sourceset);
       player.on("fullscreenchange", fullscreenchange);
 
       return () => {
         player.off("canplay", canplay);
         player.off("playing", playing);
         player.off("loadstart", loadstart);
+        player.off("sourceset", sourceset);
         player.off("fullscreenchange", fullscreenchange);
       };
     }, [getPlayer]);
@@ -642,8 +676,8 @@ export const ScenePlayer: React.FC<IScenePlayerProps> = PatchComponent(
               src: stream.url,
               type: stream.mime_type ?? undefined,
               label: stream.label ?? undefined,
-              offset: !isDirect(src),
-              duration,
+              offset: !isDirect(src) && !looping,
+              duration: looping ? undefined : duration,
             };
           })
       );
@@ -750,6 +784,7 @@ export const ScenePlayer: React.FC<IScenePlayerProps> = PatchComponent(
       uiConfig?.alwaysStartFromBeginning,
       uiConfig?.disableMobileMediaAutoRotateEnabled,
       _initialTimestamp,
+      looping,
     ]);
 
     useEffect(() => {
@@ -901,9 +936,15 @@ export const ScenePlayer: React.FC<IScenePlayerProps> = PatchComponent(
       const player = getPlayer();
       if (!player) return;
 
-      player.loop(looping);
+      // For transcoded streams (MP4/WebM/MKV), the server handles looping
+      // via -stream_loop -1, producing a continuous infinite stream.
+      // Client-side loop must be disabled for these to avoid the browser
+      // seeking back to start and causing a gap.
+      // For direct streams and HLS/DASH, the server doesn't loop,
+      // so the client must handle it.
+      player.loop(looping && currentSourceIsDirect);
       interactiveClient.setLooping(looping);
-    }, [getPlayer, interactiveClient, looping]);
+    }, [getPlayer, interactiveClient, looping, currentSourceIsDirect]);
 
     useEffect(() => {
       const player = getPlayer();

@@ -16,6 +16,8 @@ type Performer {
   id: ID!
   name: String!
   disambiguation: String
+  "Whether an AI embedding exists for this performer"
+  has_embedding: Boolean!
   url: String @deprecated(reason: "Use urls")
   urls: [String!]
   gender: GenderEnum

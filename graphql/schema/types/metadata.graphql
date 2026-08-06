@@ -366,6 +366,76 @@ input MigrateInput {
   backupPath: String!
 }
 
+input AIPerformerTagInput {
+  "ID of the performer to tag"
+  performerId: ID!
+}
+
+input AIImageTagInput {
+  "Maximum number of images to tag. Set to 0 (default) for no limit."
+  maxImages: Int
+  "Create missing performers if they don't exist in the database (default: true)"
+  createMissingPerformers: Boolean
+  "Create missing tags if they don't exist in the database (default: true)"
+  createMissingTags: Boolean
+  "Specific image IDs to tag. When set, only these images will be processed."
+  imageIds: [ID!]
+  "Additional context about the image(s) to help the AI identify the content."
+  context: String
+  "Only detect and attach performers, without changing title, details, or tags (default: false)"
+  performersOnly: Boolean
+  "Only fill in missing data: attach performers and set empty titles/details, without adding tags (default: false)"
+  fillMissingOnly: Boolean
+}
+
+input AISceneTagInput {
+  "Maximum number of scenes to tag. Set to 0 (default) for no limit."
+  maxScenes: Int
+  "Create missing performers if they don't exist in the database (default: true)"
+  createMissingPerformers: Boolean
+  "Create missing tags if they don't exist in the database (default: true)"
+  createMissingTags: Boolean
+  "Specific scene IDs to tag. When set, only these scenes will be processed."
+  sceneIds: [ID!]
+  "Additional context about the scene(s) to help the AI identify the content."
+  context: String
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+  "Only detect and attach performers, without changing title, details, or tags (default: false)"
+  performersOnly: Boolean
+  "Only fill in missing data: attach performers and set empty titles/details, without adding tags (default: false)"
+  fillMissingOnly: Boolean
+  "Number of frames to sample from the scene. 0 (default) uses automatic duration-based sampling or the configured default."
+  frames: Int
+}
+
+input AITagOrganizeInput {
+  "Maximum number of tags to include in the organization. Set to 0 (default) for no limit."
+  maxTags: Int
+  "Merge duplicate tags and consolidate aliases (default: true). Set to false to only add aliases and hierarchy."
+  allowMerge: Boolean
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+}
+
+input DetectLoopingInput {
+  "Maximum number of scenes to check. Set to 0 (default) for no limit."
+  maxScenes: Int
+  "Specific scene IDs to check for looping. When set, only these scenes will be processed."
+  sceneIds: [ID!]
+}
+
+input AIEmbeddingInput {
+  "Entity types to generate embeddings for. Valid values: scene, performer, image, gallery, studio, tag. Default: all types."
+  entityTypes: [String!]
+  "Overwrite existing embeddings for the selected model (default: false)"
+  overwrite: Boolean
+  "Embed the actual image content (pixels) of images, galleries, scene frames, and performer images instead of metadata text. Uses the image embedding model."
+  visual: Boolean
+  "Only re-embed entities whose metadata changed after their last embedding. Default false."
+  stale_only: Boolean
+}
+
 input CustomFieldsInput {
   "If populated, the entire custom fields map will be replaced with this value"
   full: Map

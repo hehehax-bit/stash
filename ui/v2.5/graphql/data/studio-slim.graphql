@@ -21,4 +21,5 @@ fragment SlimStudioData on Studio {
   ignore_auto_tag
   organized
   o_counter
+  has_embedding
 }

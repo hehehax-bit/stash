@@ -1,0 +1,377 @@
+query AIConfig {
+  aiConfig {
+    enabled
+    base_url
+    endpoint
+    model
+    embedding_model
+    image_embedding_model
+    system_prompt
+    automatic1111_enabled
+    automatic1111_base_url
+    transcription_base_url
+    transcription_model
+    transcription_endpoint
+    tag
+    performer_cluster_min_confidence
+    max_tokens
+    silence_noise_threshold
+    silence_duration_min
+    frames_to_sample
+    translation_language
+    scheduled_tasks {
+      embedding_refresh_hours
+      audio_analysis_hours
+    }
+  }
+}
+
+query AIEmbeddingStats {
+  aiEmbeddingStats {
+    scenes
+    images
+    performers
+    studios
+    tags
+    galleries
+    total
+  }
+}
+
+query AIChatSessions {
+  aiChatSessions {
+    id
+    created_at
+    updated_at
+    title
+  }
+}
+
+query AIChatHistory($session_id: ID!) {
+  aiChatHistory(session_id: $session_id) {
+    id
+    session_id
+    role
+    content
+    created_at
+  }
+}
+
+query SemanticSearch($input: SemanticSearchInput!) {
+  semanticSearch(input: $input) {
+    entity_type
+    entity_id
+    score
+    scene {
+      ...SlimSceneData
+    }
+    performer {
+      ...SlimPerformerData
+    }
+    image {
+      ...SlimImageData
+    }
+    gallery {
+      ...SlimGalleryData
+    }
+    studio {
+      ...SlimStudioData
+    }
+    tag {
+      ...SlimTagData
+    }
+  }
+}
+
+query SimilarToEntity(
+  $entity_type: String!
+  $entity_id: ID!
+  $model: String
+  $limit: Int
+) {
+  similarToEntity(
+    entity_type: $entity_type
+    entity_id: $entity_id
+    model: $model
+    limit: $limit
+  ) {
+    entity_type
+    entity_id
+    score
+    scene {
+      ...SceneData
+    }
+    performer {
+      ...PerformerData
+    }
+    image {
+      ...ImageData
+    }
+    gallery {
+      ...GalleryData
+    }
+    studio {
+      ...StudioData
+    }
+    tag {
+      ...TagData
+    }
+  }
+}
+
+query SemanticDuplicates($input: SemanticDuplicateInput!) {
+  semanticDuplicates(input: $input) {
+    entity_type
+    entities {
+      entity_id
+      scene {
+        ...SlimSceneData
+      }
+      performer {
+        ...SlimPerformerData
+      }
+      image {
+        ...SlimImageData
+      }
+      gallery {
+        ...SlimGalleryData
+      }
+      studio {
+        ...SlimStudioData
+      }
+      tag {
+        ...SlimTagData
+      }
+    }
+  }
+}
+
+query AiSuggestions($status: String, $entity_type: String) {
+  aiSuggestions(status: $status, entity_type: $entity_type) {
+    id
+    entity_type
+    entity_id
+    title
+    details
+    performers
+    tags
+    status
+    created_at
+    updated_at
+    scene {
+      id
+      title
+    }
+    image {
+      id
+      paths {
+        image
+      }
+    }
+  }
+}
+
+query AiMediaQuality($entity_type: String!, $entity_id: ID!) {
+  aiMediaQuality(entity_type: $entity_type, entity_id: $entity_id) {
+    id
+    entity_type
+    entity_id
+    quality_score
+    visual_clarity
+    lighting
+    composition
+    camera_work
+    notes
+    created_at
+    updated_at
+    scene {
+      id
+      title
+    }
+    image {
+      id
+      paths {
+        image
+      }
+    }
+  }
+}
+
+query AiSceneAudio($scene_id: ID!) {
+  aiSceneAudio(scene_id: $scene_id) {
+    id
+    scene_id
+    has_audio
+    silence_ratio
+    music
+    speech
+    moans
+    ambient
+    transcript
+    transcript_segments {
+      start
+      end
+      text
+    }
+    summary
+    audio_codec
+    created_at
+    updated_at
+    scene {
+      id
+      title
+    }
+  }
+}
+
+query AiPerformerCareer($performer_id: ID!) {
+  aiPerformerCareer(performer_id: $performer_id) {
+    id
+    performer_id
+    career_start
+    career_end
+    active_years
+    primary_niches
+    notable_studios
+    career_highlights
+    summary
+    created_at
+    updated_at
+    performer {
+      id
+      name
+    }
+  }
+}
+
+query AiFileRenames($status: String) {
+  aiFileRenames(status: $status) {
+    id
+    entity_type
+    entity_id
+    current_name
+    suggested_name
+    status
+    created_at
+    updated_at
+    scene {
+      id
+      title
+    }
+    image {
+      id
+      paths {
+        image
+      }
+    }
+  }
+}
+
+query AiSceneAudioSearch($query: String!, $limit: Int) {
+  aiSceneAudioSearch(query: $query, limit: $limit) {
+    id
+    scene_id
+    transcript
+    summary
+    scene {
+      ...SceneData
+    }
+  }
+}
+
+query AiPerformerMergeSuggestions($status: String) {
+  aiPerformerMergeSuggestions(status: $status) {
+    id
+    confidence
+    status
+    created_at
+    updated_at
+    source {
+      ...PerformerData
+    }
+    target {
+      ...PerformerData
+    }
+  }
+}
+
+query AiAudits($status: String) {
+  aiAudits(status: $status) {
+    id
+    entity_type
+    entity_id
+    field
+    current_value
+    ai_value
+    status
+    created_at
+    updated_at
+    scene {
+      ...SceneData
+    }
+    image {
+      ...ImageData
+    }
+  }
+}
+
+query AiTranslations($status: String) {
+  aiTranslations(status: $status) {
+    id
+    entity_type
+    entity_id
+    language
+    field
+    translated_text
+    status
+    created_at
+    updated_at
+    scene {
+      ...SceneData
+    }
+    image {
+      ...ImageData
+    }
+    performer {
+      ...PerformerData
+    }
+  }
+}
+
+query AiPerformerCandidates($status: String) {
+  aiPerformerCandidates(status: $status) {
+    id
+    name
+    description
+    member_count
+    entity_type
+    entity_id
+    member_ids
+    status
+    created_at
+    updated_at
+    scene {
+      ...SceneData
+    }
+    image {
+      ...ImageData
+    }
+  }
+}
+
+query AiPerformerAppearances($performer_id: ID!, $limit: Int) {
+  aiPerformerAppearances(performer_id: $performer_id, limit: $limit) {
+    marker_id
+    title
+    seconds
+    end_seconds
+    screenshot
+    scene {
+      id
+      title
+      paths {
+        screenshot
+      }
+    }
+  }
+}

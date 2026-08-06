@@ -6,6 +6,7 @@ import { GridCard } from "src/components/Shared/GridCard/GridCard";
 import { PatchComponent } from "src/patch";
 import { HoverPopover } from "../Shared/HoverPopover";
 import { Icon } from "../Shared/Icon";
+import { EmbeddingBadge } from "../Shared/EmbeddingBadge";
 import { TagLink } from "../Shared/TagLink";
 import { Button, ButtonGroup, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { FormattedMessage } from "react-intl";
@@ -254,12 +255,15 @@ export const StudioCard: React.FC<IProps> = PatchComponent(
         title={studio.name}
         linkClassName="studio-card-header"
         image={
-          <img
-            loading="lazy"
-            className="studio-card-image"
-            alt={studio.name}
-            src={studio.image_path ?? ""}
-          />
+          <>
+            <img
+              loading="lazy"
+              className="studio-card-image"
+              alt={studio.name}
+              src={studio.image_path ?? ""}
+            />
+            {studio.has_embedding && <EmbeddingBadge />}
+          </>
         }
         details={
           <div className="studio-card__details">

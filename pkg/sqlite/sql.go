@@ -148,6 +148,21 @@ func getCountSort(primaryTable, joinTable, primaryFK, direction string) string {
 	return fmt.Sprintf(" ORDER BY (SELECT COUNT(*) FROM %s AS sort WHERE sort.%s = %s.id) %s", joinTable, primaryFK, primaryTable, getSortDirection(direction))
 }
 
+// getImportanceSort sorts by a count expression, treating counts of 0 and 1 as
+// equally unimportant (bucket 1) and breaking ties randomly so that
+// equal-importance entities are shuffled rather than ordered by id or name.
+func getImportanceSort(countExpr, direction string) string {
+	return fmt.Sprintf(`
+        ORDER BY
+            CASE
+                WHEN %s <= 1
+                THEN 1                     -- 0 and 1 are in the same bucket
+                ELSE %s
+            END %s,
+            RANDOM()
+    `, countExpr, countExpr, getSortDirection(direction))
+}
+
 // getStringSearchClause returns a sqlClause for searching strings in the provided columns.
 // It is used for includes and excludes string criteria.
 func getStringSearchClause(columns []string, q string, not bool) sqlClause {

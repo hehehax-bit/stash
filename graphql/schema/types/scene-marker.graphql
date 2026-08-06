@@ -8,6 +8,8 @@ type SceneMarker {
   end_seconds: Float
   primary_tag: Tag!
   tags: [Tag!]!
+  "Performers identified in this segment by AI segmentation"
+  performers: [Performer!]!
   created_at: Time!
   updated_at: Time!
 

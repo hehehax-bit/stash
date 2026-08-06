@@ -40,6 +40,21 @@ func (r *sceneMarkerResolver) Tags(ctx context.Context, obj *models.SceneMarker)
 	return ret, err
 }
 
+func (r *sceneMarkerResolver) Performers(ctx context.Context, obj *models.SceneMarker) (ret []*models.Performer, err error) {
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		ids, err := r.repository.SceneMarker.GetPerformerIDs(ctx, obj.ID)
+		if err != nil {
+			return err
+		}
+		ret, err = r.repository.Performer.FindMany(ctx, ids)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+
+	return ret, err
+}
+
 func (r *sceneMarkerResolver) Stream(ctx context.Context, obj *models.SceneMarker) (string, error) {
 	baseURL, _ := ctx.Value(BaseURLCtxKey).(string)
 	return urlbuilders.NewSceneMarkerURLBuilder(baseURL, obj).GetStreamURL(), nil

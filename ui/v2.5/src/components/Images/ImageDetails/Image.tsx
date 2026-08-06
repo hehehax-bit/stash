@@ -8,6 +8,7 @@ import {
   useImageIncrementO,
   useImageUpdate,
   mutateMetadataScan,
+  mutateMetadataAIImageTag,
   useImageDecrementO,
   useImageResetO,
 } from "src/core/StashService";
@@ -52,6 +53,7 @@ const ImagePage: React.FC<IProps> = ({ image }) => {
   const Toast = useToast();
   const intl = useIntl();
   const { configuration } = useConfigurationContext();
+  const { data: aiConfig } = GQL.useAiConfigQuery();
   const { showStudioText } = configuration?.ui ?? {};
 
   const [incrementO] = useImageIncrementO(image.id);
@@ -97,6 +99,34 @@ const ImagePage: React.FC<IProps> = ({ image }) => {
           singularEntity: intl.formatMessage({ id: "image" }),
         }
       )
+    );
+  }
+
+  async function onAIDetectPerformers() {
+    try {
+      await mutateMetadataAIImageTag({
+        imageIds: [image.id],
+        createMissingPerformers: true,
+        createMissingTags: true,
+        performersOnly: true,
+      });
+      Toast.success(
+        intl.formatMessage(
+          { id: "config.tasks.added_job_to_queue" },
+          { operation_name: "AI Image Performers" }
+        )
+      );
+    } catch (e) {
+      Toast.error(e);
+    }
+  }
+
+  function onAskAI() {
+    const title = imageTitle(image);
+    history.push(
+      `/aiChat?message=${encodeURIComponent(
+        `Analyze this image: ${title} (id ${image.id})`
+      )}`
     );
   }
 
@@ -213,6 +243,22 @@ const ImagePage: React.FC<IProps> = ({ image }) => {
             onClick={() => setIsGenerateDialogOpen(true)}
           >
             <FormattedMessage id="actions.generate" />…
+          </Dropdown.Item>
+          {aiConfig?.aiConfig?.enabled && (
+            <Dropdown.Item
+              key="ai-detect-performers"
+              className="bg-secondary text-white"
+              onClick={() => onAIDetectPerformers()}
+            >
+              <FormattedMessage id="actions.ai_detect_performers" />
+            </Dropdown.Item>
+          )}
+          <Dropdown.Item
+            key="ask-ai"
+            className="bg-secondary text-white"
+            onClick={() => onAskAI()}
+          >
+            <FormattedMessage id="actions.ask_ai" />
           </Dropdown.Item>
           <Dropdown.Item
             key="delete-image"

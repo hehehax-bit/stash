@@ -8,6 +8,7 @@ fragment ImageData on Image {
   details
   photographer
   organized
+  has_embedding
   o_counter
   created_at
   updated_at

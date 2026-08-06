@@ -42,6 +42,11 @@ export const PrimaryTags: React.FC<IPrimaryTags> = ({
           {tag.name}
         </Badge>
       ));
+      const performers = (marker.performers ?? []).map((p) => (
+        <Badge key={p.id} variant="primary" className="tag-item">
+          {p.name}
+        </Badge>
+      ));
 
       return (
         <div key={marker.id}>
@@ -75,7 +80,10 @@ export const PrimaryTags: React.FC<IPrimaryTags> = ({
               </Button>
             )}
           </div>
-          <div className="card-section centered">{tags}</div>
+          <div className="card-section centered">
+            {performers}
+            {tags}
+          </div>
         </div>
       );
     });

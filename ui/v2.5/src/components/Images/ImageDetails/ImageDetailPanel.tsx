@@ -8,6 +8,8 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { PhotographerLink } from "src/components/Shared/Link";
 import { PatchComponent } from "../../../patch";
 import { CustomFields } from "src/components/Shared/CustomFields";
+import MediaQualityDisplay from "../../Scenes/SceneDetails/MediaQualityDisplay";
+import SimilarItemsPanel from "src/components/Shared/SimilarItemsPanel";
 interface IImageDetailProps {
   image: GQL.ImageDataFragment;
 }
@@ -136,6 +138,9 @@ export const ImageDetailPanel: React.FC<IImageDetailProps> = PatchComponent(
             <CustomFields values={props.image.custom_fields} fullWidth />
           </div>
         </div>
+
+        <MediaQualityDisplay entityType="image" entityID={props.image.id} />
+        <SimilarItemsPanel entityType="image" entityId={props.image.id} />
       </>
     );
   }

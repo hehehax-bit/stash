@@ -5,6 +5,7 @@ import {
   faCircleExclamation,
   faCog,
   faHourglassStart,
+  faRobot,
   faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import moment from "moment/min/moment-with-locales";
@@ -25,6 +26,7 @@ type JobFragment = Pick<
   | "status"
   | "subTasks"
   | "description"
+  | "type"
   | "progress"
   | "error"
   | "startTime"
@@ -193,6 +195,11 @@ const Task: React.FC<IJob> = ({ job }) => {
             <div>
               {getStatusIcon()}
               <span>{job.description}</span>
+              {job.type === "ai" && (
+                <span className="job-type-badge" title="AI task">
+                  <Icon icon={faRobot} /> AI
+                </span>
+              )}
             </div>
             {maybeRenderETA()}
           </div>
@@ -210,6 +217,7 @@ export const JobTable: React.FC = () => {
   const jobsSubscribe = useJobsSubscribe();
 
   const [queue, setQueue] = useState<JobFragment[]>([]);
+  const [aiOnly, setAiOnly] = useState(false);
 
   useEffect(() => {
     setQueue(jobStatus.data?.jobQueue ?? []);
@@ -252,15 +260,29 @@ export const JobTable: React.FC = () => {
     }
   }, [jobsSubscribe.data]);
 
+  const visible = aiOnly ? (queue ?? []).filter((j) => j.type === "ai") : queue;
+
   return (
     <Card className="job-table">
+      <div className="job-table-filter">
+        <label className="mr-2">
+          <input
+            type="checkbox"
+            checked={aiOnly}
+            onChange={() => setAiOnly(!aiOnly)}
+          />
+          <span className="ml-1">
+            {intl.formatMessage({ id: "config.tasks.ai_tasks_only" })}
+          </span>
+        </label>
+      </div>
       <ul>
         {!queue?.length ? (
           <span className="empty-queue-message">
             {intl.formatMessage({ id: "config.tasks.empty_queue" })}
           </span>
         ) : undefined}
-        {(queue ?? []).map((j) => (
+        {(visible ?? []).map((j) => (
           <Task job={j} key={j.id} />
         ))}
       </ul>

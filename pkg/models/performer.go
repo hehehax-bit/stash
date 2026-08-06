@@ -152,6 +152,8 @@ type PerformerFilterType struct {
 	Gender *GenderCriterionInput `json:"gender"`
 	// Filter to only include performers missing this property
 	IsMissing *string `json:"is_missing"`
+	// Filter to only include performers which have an embedding. `true` or `false`
+	HasEmbedding *string `json:"has_embedding"`
 	// Filter to only include performers with these tags
 	Tags *HierarchicalMultiCriterionInput `json:"tags"`
 	// Filter by tag count

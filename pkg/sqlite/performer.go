@@ -998,6 +998,24 @@ AND NOT EXISTS(SELECT 1 FROM `+table+` o WHERE o.`+idColumn+` = `+table+`.`+idCo
 		}
 	}
 
+	// clean up AI stores referencing the source performers: careers,
+	// embeddings, pending review rows, and merge suggestions
+	if _, err := dbWrapper.Exec(ctx, `DELETE FROM ai_performer_career WHERE performer_id IN `+inBinding, srcArgs...); err != nil {
+		return err
+	}
+	if _, err := dbWrapper.Exec(ctx, `DELETE FROM embeddings WHERE entity_type = 'performer' AND entity_id IN `+inBinding, srcArgs...); err != nil {
+		return err
+	}
+	if _, err := dbWrapper.Exec(ctx, `DELETE FROM ai_suggestions WHERE entity_type = 'performer' AND entity_id IN `+inBinding, srcArgs...); err != nil {
+		return err
+	}
+	if _, err := dbWrapper.Exec(ctx, `DELETE FROM ai_file_rename WHERE entity_type = 'performer' AND entity_id IN `+inBinding, srcArgs...); err != nil {
+		return err
+	}
+	if _, err := dbWrapper.Exec(ctx, `DELETE FROM ai_performer_suggestions WHERE source_performer_id IN `+inBinding+` OR target_performer_id IN `+inBinding, append(srcArgs, srcArgs...)...); err != nil {
+		return err
+	}
+
 	for _, id := range source {
 		err := qb.Destroy(ctx, id)
 		if err != nil {

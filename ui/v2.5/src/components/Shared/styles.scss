@@ -1269,3 +1269,15 @@ input[type="range"].double-range-slider-max {
   margin-top: 0.5rem;
   text-align: center;
 }
+
+.embedding-badge {
+  color: #7ec8ff;
+  font-size: 0.9rem;
+  line-height: 1;
+  pointer-events: none;
+  position: absolute;
+  right: 0.5rem;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+  top: 0.5rem;
+  z-index: 1;
+}

@@ -10,6 +10,7 @@ import { FavoritePerformerCriterionOption } from "./criteria/favorite";
 import { GenderCriterionOption } from "./criteria/gender";
 import { CircumcisedCriterionOption } from "./criteria/circumcised";
 import { PerformerIsMissingCriterionOption } from "./criteria/is-missing";
+import { HasEmbeddingCriterionOption } from "./criteria/has-embedding";
 import { StashIDCriterionOption } from "./criteria/stash-ids";
 import { StudiosCriterionOption } from "./criteria/studios";
 import { TagsCriterionOption } from "./criteria/tags";
@@ -98,6 +99,7 @@ const criterionOptions = [
   GenderCriterionOption,
   CircumcisedCriterionOption,
   PerformerIsMissingCriterionOption,
+  HasEmbeddingCriterionOption,
   TagsCriterionOption,
   GroupsCriterionOption,
   StudiosCriterionOption,

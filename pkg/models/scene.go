@@ -69,6 +69,8 @@ type SceneFilterType struct {
 	Duration *IntCriterionInput `json:"duration"`
 	// Filter to only include scenes which have markers. `true` or `false`
 	HasMarkers *string `json:"has_markers"`
+	// Filter to only include scenes which have an embedding. `true` or `false`
+	HasEmbedding *string `json:"has_embedding"`
 	// Filter to only include scenes missing this property
 	IsMissing *string `json:"is_missing"`
 	// Filter to only include scenes with this studio

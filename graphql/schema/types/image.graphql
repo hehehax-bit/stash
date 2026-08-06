@@ -11,6 +11,8 @@ type Image {
   photographer: String
   o_counter: Int
   organized: Boolean!
+  "Whether an AI embedding exists for this image"
+  has_embedding: Boolean!
   created_at: Time!
   updated_at: Time!
 

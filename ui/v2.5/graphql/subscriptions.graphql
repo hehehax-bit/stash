@@ -6,6 +6,7 @@ subscription JobsSubscribe {
       status
       subTasks
       description
+      type
       progress
       error
       startTime

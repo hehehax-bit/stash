@@ -38,6 +38,7 @@ import {
 import { ManualProvider } from "./components/Help/context";
 import { InteractiveProvider } from "./hooks/Interactive/context";
 import { ReleaseNotesDialog } from "./components/Dialogs/ReleaseNotesDialog";
+import { AIBackgroundJobNotifier } from "./components/AIBackgroundJobNotifier/AIBackgroundJobNotifier";
 import { releaseNotes } from "./docs/en/ReleaseNotes";
 import { getPlatformURL } from "./core/createClient";
 import { lazyComponent } from "./utils/lazyComponent";
@@ -83,6 +84,7 @@ const SceneFilenameParser = lazyComponent(
 const SceneDuplicateChecker = lazyComponent(
   () => import("./components/SceneDuplicateChecker/SceneDuplicateChecker")
 );
+const AIChat = lazyComponent(() => import("./components/AIChat/AIChatPanel"));
 
 const appleRendering = isPlatformUniquelyRenderedByApple();
 
@@ -270,6 +272,7 @@ export const App: React.FC = () => {
               path="/sceneDuplicateChecker"
               component={SceneDuplicateChecker}
             />
+            <Route path="/aiChat" component={AIChat} />
             <Route path="/setup" component={Setup} />
             <Route path="/welcome" component={Welcome} />
             <Route path="/migrate" component={Migrate} />
@@ -366,6 +369,7 @@ export const App: React.FC = () => {
                 {maybeRenderReleaseNotes()}
                 <ConnectionMonitor />
                 <TroubleshootingModeOverlay />
+                <AIBackgroundJobNotifier />
                 <Suspense fallback={<LoadingIndicator />}>
                   <LightboxProvider>
                     <ManualProvider>

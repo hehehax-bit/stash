@@ -1026,6 +1026,7 @@ var imageSortOptions = sortOptions{
 	"filesize",
 	"id",
 	"o_counter",
+	"o_counter_random",
 	"path",
 	"performer_count",
 	"random",
@@ -1087,6 +1088,8 @@ func (qb *ImageStore) setImageSortAndPagination(q *queryBuilder, findFilter *mod
 			sortClause = getCountSort(imageTable, imagesTagsTable, imageIDColumn, direction)
 		case "performer_count":
 			sortClause = getCountSort(imageTable, performersImagesTable, imageIDColumn, direction)
+		case "o_counter_random":
+			sortClause = getImportanceSort("images.o_counter", direction)
 		case "mod_time", "filesize":
 			addFilesJoin()
 			sortClause = getSort(sort, direction, "files")

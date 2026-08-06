@@ -11,6 +11,7 @@ import {
   usePerformerUpdate,
   usePerformerDestroy,
   mutateMetadataAutoTag,
+  mutateMetadataAIPerformerTag,
 } from "src/core/StashService";
 import { DetailsEditNavbar } from "src/components/Shared/DetailsEditNavbar";
 import { ErrorMessage } from "src/components/Shared/ErrorMessage";
@@ -26,10 +27,12 @@ import { PerformerScenesPanel } from "./PerformerScenesPanel";
 import { PerformerGalleriesPanel } from "./PerformerGalleriesPanel";
 import { PerformerGroupsPanel } from "./PerformerGroupsPanel";
 import { PerformerImagesPanel } from "./PerformerImagesPanel";
+import { PerformerAppearancesPanel } from "./PerformerAppearancesPanel";
 import { PerformerAppearsWithPanel } from "./performerAppearsWithPanel";
 import { PerformerEditPanel } from "./PerformerEditPanel";
 import { PerformerMergeModal } from "../PerformerMergeDialog";
 import { PerformerSubmitButton } from "./PerformerSubmitButton";
+import SimilarItemsPanel from "src/components/Shared/SimilarItemsPanel";
 import { useRatingKeybinds } from "src/hooks/keybinds";
 import { DetailImage } from "src/components/Shared/DetailImage";
 import { useLoadStickyHeader } from "src/hooks/detailsPanel";
@@ -68,6 +71,7 @@ const validTabs = [
   "images",
   "groups",
   "appearswith",
+  "appearances",
 ] as const;
 type TabKey = (typeof validTabs)[number];
 
@@ -201,6 +205,13 @@ const PerformerTabs: React.FC<{
           performer={performer}
         />
       </Tab>
+
+      <Tab
+        eventKey="appearances"
+        title={<FormattedMessage id="performers.tab_appearances" />}
+      >
+        <PerformerAppearancesPanel performer={performer} />
+      </Tab>
     </Tabs>
   );
 };
@@ -285,6 +296,28 @@ const PerformerPage: React.FC<IProps> = PatchComponent(
       } catch (e) {
         Toast.error(e);
       }
+    }
+
+    async function onAITag() {
+      try {
+        await mutateMetadataAIPerformerTag({ performerId: performer.id });
+        Toast.success(
+          intl.formatMessage(
+            { id: "config.tasks.added_job_to_queue" },
+            { operation_name: "AI Performer Tag" }
+          )
+        );
+      } catch (e) {
+        Toast.error(e);
+      }
+    }
+
+    function onAskAI() {
+      history.push(
+        `/aiChat?message=${encodeURIComponent(
+          `Analyze this performer: ${performer.name} (id ${performer.id})`
+        )}`
+      );
     }
 
     function renderMergeButton() {
@@ -500,6 +533,12 @@ const PerformerPage: React.FC<IProps> = PatchComponent(
                         customButtons={
                           <>
                             {renderMergeButton()}
+                            <Button variant="secondary" onClick={onAITag}>
+                              AI Tag
+                            </Button>
+                            <Button variant="secondary" onClick={onAskAI}>
+                              <FormattedMessage id="actions.ask_ai" />
+                            </Button>
                             <div>
                               <PerformerSubmitButton performer={performer} />
                             </div>
@@ -513,6 +552,10 @@ const PerformerPage: React.FC<IProps> = PatchComponent(
             </div>
           </div>
         </div>
+
+        {!isEditing && (
+          <SimilarItemsPanel entityType="performer" entityId={performer.id} />
+        )}
 
         {!isEditing && loadStickyHeader && (
           <CompressedPerformerDetailsPanel performer={performer} />

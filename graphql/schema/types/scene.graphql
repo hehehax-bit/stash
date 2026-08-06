@@ -49,6 +49,8 @@ type Scene {
   rating100: Int
   organized: Boolean!
   o_counter: Int
+  "Whether an AI embedding exists for this scene"
+  has_embedding: Boolean!
   interactive: Boolean!
   interactive_speed: Int
   captions: [VideoCaption!]

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import { Button, Form, Col, Row } from "react-bootstrap";
+import { Button, ButtonGroup, Form, Col, Row } from "react-bootstrap";
 import Mousetrap from "mousetrap";
 import * as GQL from "src/core/generated-graphql";
 import * as yup from "yup";
@@ -26,6 +26,7 @@ import {
   mutateReloadScrapers,
 } from "../../../core/StashService";
 import { ImageScrapeDialog } from "./ImageScrapeDialog";
+import AITagContextDialog from "src/components/Dialogs/AITagContextDialog/AITagContextDialog";
 import { Studio, StudioSelect } from "src/components/Studios/StudioSelect";
 import { galleryTitle } from "src/core/galleries";
 import {
@@ -56,6 +57,7 @@ export const ImageEditPanel: React.FC<IProps> = ({
 }) => {
   const intl = useIntl();
   const Toast = useToast();
+  const { data: aiConfig } = GQL.useAiConfigQuery();
 
   // Network state
   const [isLoading, setIsLoading] = useState(false);
@@ -63,6 +65,7 @@ export const ImageEditPanel: React.FC<IProps> = ({
   const [galleries, setGalleries] = useState<Gallery[]>([]);
   const [performers, setPerformers] = useState<Performer[]>([]);
   const [studio, setStudio] = useState<Studio | null>(null);
+  const [isAITagDialogOpen, setIsAITagDialogOpen] = useState(false);
 
   const isNew = image.id === undefined;
 
@@ -454,6 +457,13 @@ export const ImageEditPanel: React.FC<IProps> = ({
       />
 
       {maybeRenderScrapeDialog()}
+      {isAITagDialogOpen && (
+        <AITagContextDialog
+          entityType="image"
+          entityId={image.id!}
+          onClose={() => setIsAITagDialogOpen(false)}
+        />
+      )}
       <Form noValidate onSubmit={formik.handleSubmit}>
         <Row className="form-container edit-buttons-container px-3 pt-3">
           <div className="edit-buttons mb-3 pl-0">
@@ -479,12 +489,22 @@ export const ImageEditPanel: React.FC<IProps> = ({
           </div>
           <div className="ml-auto text-right d-flex">
             {!isNew && (
-              <ScraperMenu
-                toggle={intl.formatMessage({ id: "actions.scrape_with" })}
-                scrapers={fragmentScrapers}
-                onScraperClicked={onScrapeClicked}
-                onReloadScrapers={onReloadScrapers}
-              />
+              <ButtonGroup className="scraper-group">
+                {aiConfig?.aiConfig?.enabled && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setIsAITagDialogOpen(true)}
+                  >
+                    AI Tag
+                  </Button>
+                )}
+                <ScraperMenu
+                  toggle={intl.formatMessage({ id: "actions.scrape_with" })}
+                  scrapers={fragmentScrapers}
+                  onScraperClicked={onScrapeClicked}
+                  onReloadScrapers={onReloadScrapers}
+                />
+              </ButtonGroup>
             )}
           </div>
         </Row>

@@ -20,6 +20,12 @@ fragment SceneMarkerData on SceneMarker {
     id
     name
   }
+
+  performers {
+    id
+    name
+    image_path
+  }
 }
 
 fragment SceneMarkerSceneData on Scene {

@@ -48,6 +48,7 @@ func jobToJobModel(j job.Job) *Job {
 		ID:          strconv.Itoa(j.ID),
 		Status:      JobStatus(j.Status),
 		Description: sanitiseWebsocketString(j.Description),
+		Type:        j.Type,
 		SubTasks:    subTasks,
 		StartTime:   j.StartTime,
 		EndTime:     j.EndTime,

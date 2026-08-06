@@ -1178,6 +1178,7 @@ var sceneSortOptions = sortOptions{
 	"last_played_at",
 	"movie_scene_number",
 	"o_counter",
+	"o_counter_random",
 	"organized",
 	"performer_count",
 	"play_count",
@@ -1310,6 +1311,8 @@ func (qb *SceneStore) setSceneSort(query *queryBuilder, findFilter *models.FindF
 		query.sortAndPagination += fmt.Sprintf(" ORDER BY (SELECT MAX(o_date) FROM %s AS sort WHERE sort.%s = %s.id) %s", scenesODatesTable, sceneIDColumn, sceneTable, getSortDirection(direction))
 	case "o_counter":
 		query.sortAndPagination += getCountSort(sceneTable, scenesODatesTable, sceneIDColumn, direction)
+	case "o_counter_random":
+		query.sortAndPagination += getImportanceSort(fmt.Sprintf("(SELECT COUNT(*) FROM %s AS sort WHERE sort.%s = %s.id)", scenesODatesTable, sceneIDColumn, sceneTable), direction)
 	case "performer_age":
 		// Looking at the youngest performer by default
 		aggregation := "MIN"

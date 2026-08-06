@@ -227,6 +227,23 @@ export const queryFindImages = (filter: ListFilterModel) =>
     },
   });
 
+export const queryFindImagesForSelect = (filter: ListFilterModel) =>
+  client.query<GQL.FindImagesForSelectQuery>({
+    query: GQL.FindImagesForSelectDocument,
+    variables: {
+      filter: filter.makeFindFilter(),
+      image_filter: filter.makeFilter(),
+    },
+  });
+
+export const queryFindImagesByIDForSelect = (imageIDs: string[]) =>
+  client.query<GQL.FindImagesForSelectQuery>({
+    query: GQL.FindImagesForSelectDocument,
+    variables: {
+      ids: imageIDs,
+    },
+  });
+
 export const useFindGroup = (id: string) => {
   const skip = id === "new" || id === "";
   return GQL.useFindGroupQuery({ variables: { id }, skip });
@@ -2914,6 +2931,150 @@ export const mutateUninstallPluginPackages = (
   });
 
 /// Tasks
+
+export const mutateMetadataAIImageTag = (input: GQL.AiImageTagInput) =>
+  client.mutate<GQL.MetadataAiImageTagMutation>({
+    mutation: GQL.MetadataAiImageTagDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAIPerformerTag = (input: GQL.AiPerformerTagInput) =>
+  client.mutate<GQL.MetadataAiPerformerTagMutation>({
+    mutation: GQL.MetadataAiPerformerTagDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAISceneTag = (input: GQL.AiSceneTagInput) =>
+  client.mutate<GQL.MetadataAiSceneTagMutation>({
+    mutation: GQL.MetadataAiSceneTagDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataDetectLooping = (input: GQL.DetectLoopingInput) =>
+  client.mutate<GQL.MetadataDetectLoopingMutation>({
+    mutation: GQL.MetadataDetectLoopingDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAITagOrganize = (input: GQL.AiTagOrganizeInput) =>
+  client.mutate<GQL.MetadataAiTagOrganizeMutation>({
+    mutation: GQL.MetadataAiTagOrganizeDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAIEmbedding = (input: GQL.AiEmbeddingInput) =>
+  client.mutate<GQL.MetadataAiEmbeddingMutation>({
+    mutation: GQL.MetadataAiEmbeddingDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAIPerformerCluster = (
+  input: GQL.AiPerformerClusterInput
+) =>
+  client.mutate<GQL.MetadataAiPerformerClusterMutation>({
+    mutation: GQL.MetadataAiPerformerClusterDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAIPerformerDiscovery = (
+  input: GQL.AiPerformerDiscoveryInput
+) =>
+  client.mutate<GQL.MetadataAiPerformerDiscoveryMutation>({
+    mutation: GQL.MetadataAiPerformerDiscoveryDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAITranslate = (input: GQL.AiTranslateInput) =>
+  client.mutate<GQL.MetadataAiTranslateMutation>({
+    mutation: GQL.MetadataAiTranslateDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAIAudit = (input: GQL.AiAuditInput) =>
+  client.mutate<GQL.MetadataAiAuditMutation>({
+    mutation: GQL.MetadataAiAuditDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAIPerformerMergeSuggest = (
+  input: GQL.AiPerformerMergeSuggestInput
+) =>
+  client.mutate<GQL.MetadataAiPerformerMergeSuggestMutation>({
+    mutation: GQL.MetadataAiPerformerMergeSuggestDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAISceneSegment = (input: GQL.AiSceneSegmentInput) =>
+  client.mutate<GQL.MetadataAiSceneSegmentMutation>({
+    mutation: GQL.MetadataAiSceneSegmentDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAISuggestionGenerate = (
+  input: GQL.AiSuggestionInput
+) =>
+  client.mutate<GQL.MetadataAiSuggestionGenerateMutation>({
+    mutation: GQL.MetadataAiSuggestionGenerateDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAIMediaQuality = (input: GQL.AiMediaQualityInput) =>
+  client.mutate<GQL.MetadataAiMediaQualityMutation>({
+    mutation: GQL.MetadataAiMediaQualityDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAIAudioAnalyze = (input: GQL.AiAudioAnalyzeInput) =>
+  client.mutate<GQL.MetadataAiAudioAnalyzeMutation>({
+    mutation: GQL.MetadataAiAudioAnalyzeDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAIPerformerCareer = (
+  input: GQL.AiPerformerCareerInput
+) =>
+  client.mutate<GQL.MetadataAiPerformerCareerMutation>({
+    mutation: GQL.MetadataAiPerformerCareerDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAISmartCollections = (
+  input: GQL.AiSmartCollectionsInput
+) =>
+  client.mutate<GQL.MetadataAiSmartCollectionsMutation>({
+    mutation: GQL.MetadataAiSmartCollectionsDocument,
+    variables: { input },
+  });
+
+export const mutateMetadataAIFileRename = (input: GQL.AiFileRenameInput) =>
+  client.mutate<GQL.MetadataAiFileRenameMutation>({
+    mutation: GQL.MetadataAiFileRenameDocument,
+    variables: { input },
+  });
+
+export const mutateAISuggestionApply = (input: GQL.AiSuggestionApplyInput) =>
+  client.mutate<GQL.AiSuggestionApplyMutation>({
+    mutation: GQL.AiSuggestionApplyDocument,
+    variables: { input },
+  });
+
+export const mutateAISuggestionReject = (suggestionId: string) =>
+  client.mutate<GQL.AiSuggestionRejectMutation>({
+    mutation: GQL.AiSuggestionRejectDocument,
+    variables: { suggestion_id: suggestionId },
+  });
+
+export const mutateAIFileRenameApply = (input: GQL.AiFileRenameApplyInput) =>
+  client.mutate<GQL.AiFileRenameApplyMutation>({
+    mutation: GQL.AiFileRenameApplyDocument,
+    variables: { input },
+  });
+
+export const mutateAIFileRenameReject = (renameId: string) =>
+  client.mutate<GQL.AiFileRenameRejectMutation>({
+    mutation: GQL.AiFileRenameRejectDocument,
+    variables: { rename_id: renameId },
+  });
 
 export const mutateMetadataScan = (input: GQL.ScanMetadataInput) =>
   client.mutate<GQL.MetadataScanMutation>({

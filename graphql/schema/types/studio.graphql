@@ -9,6 +9,8 @@ type Studio {
   tags: [Tag!]!
   ignore_auto_tag: Boolean!
   organized: Boolean!
+  "Whether an AI embedding exists for this studio"
+  has_embedding: Boolean!
 
   image_path: String # Resolver
   

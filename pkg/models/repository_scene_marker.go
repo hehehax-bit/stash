@@ -37,6 +37,7 @@ type SceneMarkerUpdater interface {
 	Update(ctx context.Context, updatedSceneMarker *SceneMarker) error
 	UpdatePartial(ctx context.Context, id int, updatedSceneMarker SceneMarkerPartial) (*SceneMarker, error)
 	UpdateTags(ctx context.Context, markerID int, tagIDs []int) error
+	UpdatePerformers(ctx context.Context, markerID int, performerIDs []int) error
 }
 
 // SceneMarkerDestroyer provides methods to destroy scene markers.
@@ -60,6 +61,8 @@ type SceneMarkerReader interface {
 	All(ctx context.Context) ([]*SceneMarker, error)
 	Wall(ctx context.Context, q *string) ([]*SceneMarker, error)
 	GetMarkerStrings(ctx context.Context, q *string, sort *string) ([]*MarkerStringsResultType, error)
+	GetPerformerIDs(ctx context.Context, relatedID int) ([]int, error)
+	FindByPerformerIDs(ctx context.Context, performerID, limit int) ([]*SceneMarker, error)
 }
 
 // SceneMarkerWriter provides all methods to modify scene markers.

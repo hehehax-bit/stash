@@ -34,7 +34,7 @@ const (
 	cacheSizeEnv = "STASH_SQLITE_CACHE_SIZE"
 )
 
-var appSchemaVersion uint = 85
+var appSchemaVersion uint = 100
 
 //go:embed migrations/*.sql
 var migrationsBox embed.FS
@@ -66,19 +66,31 @@ func (e *MismatchedSchemaVersionError) Error() string {
 }
 
 type storeRepository struct {
-	Blobs          *BlobStore
-	File           *FileStore
-	Folder         *FolderStore
-	Image          *ImageStore
-	Gallery        *GalleryStore
-	GalleryChapter *GalleryChapterStore
-	Scene          *SceneStore
-	SceneMarker    *SceneMarkerStore
-	Performer      *PerformerStore
-	SavedFilter    *SavedFilterStore
-	Studio         *StudioStore
-	Tag            *TagStore
-	Group          *GroupStore
+	Blobs                 *BlobStore
+	File                  *FileStore
+	Folder                *FolderStore
+	Image                 *ImageStore
+	Gallery               *GalleryStore
+	GalleryChapter        *GalleryChapterStore
+	Scene                 *SceneStore
+	SceneMarker           *SceneMarkerStore
+	Performer             *PerformerStore
+	SavedFilter           *SavedFilterStore
+	Studio                *StudioStore
+	Tag                   *TagStore
+	Group                 *GroupStore
+	AI                    *aiChatStore
+	Embedding             *embeddingStore
+	Memory                *memoryStore
+	AISuggestion          *aiSuggestionStore
+	AIMediaQuality        *aiMediaQualityStore
+	AISceneAudio          *aiSceneAudioStore
+	AIPerformerCareer     *aiPerformerCareerStore
+	AIFileRename          *aiFileRenameStore
+	AIPerformerSuggestion *aiPerformerSuggestionStore
+	AIAudit               *aiAuditStore
+	AITranslation         *aiTranslationStore
+	AIPerformerCandidate  *aiPerformerCandidateStore
 }
 
 type Database struct {
@@ -104,19 +116,31 @@ func NewDatabase() *Database {
 
 	r := &storeRepository{}
 	*r = storeRepository{
-		Blobs:          blobStore,
-		File:           fileStore,
-		Folder:         folderStore,
-		Scene:          NewSceneStore(r, blobStore),
-		SceneMarker:    NewSceneMarkerStore(),
-		Image:          NewImageStore(r),
-		Gallery:        galleryStore,
-		GalleryChapter: NewGalleryChapterStore(),
-		Performer:      performerStore,
-		Studio:         studioStore,
-		Tag:            tagStore,
-		Group:          NewGroupStore(blobStore),
-		SavedFilter:    NewSavedFilterStore(),
+		Blobs:                 blobStore,
+		File:                  fileStore,
+		Folder:                folderStore,
+		Scene:                 NewSceneStore(r, blobStore),
+		SceneMarker:           NewSceneMarkerStore(),
+		Image:                 NewImageStore(r),
+		Gallery:               galleryStore,
+		GalleryChapter:        NewGalleryChapterStore(),
+		Performer:             performerStore,
+		Studio:                studioStore,
+		Tag:                   tagStore,
+		Group:                 NewGroupStore(blobStore),
+		SavedFilter:           NewSavedFilterStore(),
+		AI:                    NewAIChatStore(),
+		Embedding:             NewEmbeddingStore(),
+		Memory:                NewMemoryStore(),
+		AISuggestion:          NewAISuggestionStore(),
+		AIMediaQuality:        NewAIMediaQualityStore(),
+		AISceneAudio:          NewAISceneAudioStore(),
+		AIPerformerCareer:     NewAIPerformerCareerStore(),
+		AIFileRename:          NewAIFileRenameStore(),
+		AIPerformerSuggestion: NewAIPerformerSuggestionStore(),
+		AIAudit:               NewAIAuditStore(),
+		AITranslation:         NewAITranslationStore(),
+		AIPerformerCandidate:  NewAIPerformerCandidateStore(),
 	}
 
 	ret := &Database{

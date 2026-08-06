@@ -130,6 +130,29 @@ func (_m *SceneMarkerReaderWriter) Find(ctx context.Context, id int) (*models.Sc
 	return r0, r1
 }
 
+// FindByPerformerIDs provides a mock function with given fields: ctx, performerID, limit
+func (_m *SceneMarkerReaderWriter) FindByPerformerIDs(ctx context.Context, performerID int, limit int) ([]*models.SceneMarker, error) {
+	ret := _m.Called(ctx, performerID, limit)
+
+	var r0 []*models.SceneMarker
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) []*models.SceneMarker); ok {
+		r0 = rf(ctx, performerID, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.SceneMarker)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, int, int) error); ok {
+		r1 = rf(ctx, performerID, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // FindBySceneID provides a mock function with given fields: ctx, sceneID
 func (_m *SceneMarkerReaderWriter) FindBySceneID(ctx context.Context, sceneID int) ([]*models.SceneMarker, error) {
 	ret := _m.Called(ctx, sceneID)
@@ -192,6 +215,29 @@ func (_m *SceneMarkerReaderWriter) GetMarkerStrings(ctx context.Context, q *stri
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *string, *string) error); ok {
 		r1 = rf(ctx, q, sort)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetPerformerIDs provides a mock function with given fields: ctx, relatedID
+func (_m *SceneMarkerReaderWriter) GetPerformerIDs(ctx context.Context, relatedID int) ([]int, error) {
+	ret := _m.Called(ctx, relatedID)
+
+	var r0 []int
+	if rf, ok := ret.Get(0).(func(context.Context, int) []int); ok {
+		r0 = rf(ctx, relatedID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]int)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, relatedID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -308,6 +354,20 @@ func (_m *SceneMarkerReaderWriter) UpdatePartial(ctx context.Context, id int, up
 	}
 
 	return r0, r1
+}
+
+// UpdatePerformers provides a mock function with given fields: ctx, markerID, performerIDs
+func (_m *SceneMarkerReaderWriter) UpdatePerformers(ctx context.Context, markerID int, performerIDs []int) error {
+	ret := _m.Called(ctx, markerID, performerIDs)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, []int) error); ok {
+		r0 = rf(ctx, markerID, performerIDs)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // UpdateTags provides a mock function with given fields: ctx, markerID, tagIDs

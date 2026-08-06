@@ -8,6 +8,18 @@ import (
 	"github.com/stashapp/stash/pkg/models"
 )
 
+func (r *imageResolver) HasEmbedding(ctx context.Context, obj *models.Image) (bool, error) {
+	var has bool
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		has, err = r.repository.Embedding.HasEmbedding(ctx, "image", obj.ID)
+		return err
+	}); err != nil {
+		return false, err
+	}
+	return has, nil
+}
+
 func (r *imageResolver) getFiles(ctx context.Context, obj *models.Image) ([]models.File, error) {
 	fileIDs, err := loaders.From(ctx).ImageFiles.Load(obj.ID)
 	if err != nil {

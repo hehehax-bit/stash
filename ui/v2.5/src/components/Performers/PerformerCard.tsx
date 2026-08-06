@@ -8,6 +8,7 @@ import { GridCard } from "../Shared/GridCard/GridCard";
 import { CountryFlag } from "../Shared/CountryFlag";
 import { HoverPopover } from "../Shared/HoverPopover";
 import { Icon } from "../Shared/Icon";
+import { EmbeddingBadge } from "../Shared/EmbeddingBadge";
 import { TagLink } from "../Shared/TagLink";
 import { Button, ButtonGroup } from "react-bootstrap";
 import {
@@ -320,12 +321,15 @@ const PerformerCardImage: React.FC<IPerformerCardProps> = PatchComponent(
   "PerformerCard.Image",
   ({ performer }) => {
     return (
-      <img
-        loading="lazy"
-        className="performer-card-image"
-        alt={performer.name ?? ""}
-        src={performer.image_path ?? ""}
-      />
+      <>
+        <img
+          loading="lazy"
+          className="performer-card-image"
+          alt={performer.name ?? ""}
+          src={performer.image_path ?? ""}
+        />
+        {performer.has_embedding && <EmbeddingBadge />}
+      </>
     );
   }
 );

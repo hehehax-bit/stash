@@ -7,6 +7,7 @@ import {
 } from "./criteria/criterion";
 import { PerformerFavoriteCriterionOption } from "./criteria/favorite";
 import { ImageIsMissingCriterionOption } from "./criteria/is-missing";
+import { HasEmbeddingCriterionOption } from "./criteria/has-embedding";
 import { OrganizedCriterionOption } from "./criteria/organized";
 import { PathCriterionOption } from "./criteria/path";
 import { PerformersCriterionOption } from "./criteria/performers";
@@ -41,6 +42,11 @@ const sortByOptions = [
       value: "o_counter",
       sfwMessageID: "o_count_sfw",
     },
+    {
+      messageID: "o_count_random",
+      value: "o_counter_random",
+      sfwMessageID: "o_count_random_sfw",
+    },
   ]);
 const displayModeOptions = [DisplayMode.Grid, DisplayMode.Wall];
 
@@ -64,6 +70,7 @@ const criterionOptions = [
   ResolutionCriterionOption,
   OrientationCriterionOption,
   ImageIsMissingCriterionOption,
+  HasEmbeddingCriterionOption,
   TagsCriterionOption,
   RatingCriterionOption,
   createMandatoryNumberCriterionOption("tag_count"),

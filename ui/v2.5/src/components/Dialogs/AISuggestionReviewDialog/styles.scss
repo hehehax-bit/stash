@@ -1,0 +1,16 @@
+.ai-suggestion-review-list {
+  .list-group-item {
+    background-color: $card-bg;
+    border-color: $border-color;
+    color: $text-color;
+
+    h6,
+    strong {
+      color: $text-color;
+    }
+
+    .text-muted {
+      color: $text-muted;
+    }
+  }
+}

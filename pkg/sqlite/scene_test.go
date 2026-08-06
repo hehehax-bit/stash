@@ -20,6 +20,7 @@ import (
 	"github.com/stashapp/stash/pkg/sliceutil"
 	"github.com/stashapp/stash/pkg/sliceutil/intslice"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func loadSceneRelationships(ctx context.Context, expected models.Scene, actual *models.Scene) error {
@@ -4422,6 +4423,67 @@ func TestSceneQuerySorting(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSceneQuerySortOCountRandom(t *testing.T) {
+	sort := "o_counter_random"
+	direction := models.SortDirectionEnumDesc
+	findFilter := &models.FindFilterType{
+		Sort:      &sort,
+		Direction: &direction,
+	}
+
+	withRollbackTxn(func(ctx context.Context) error {
+		// give one scene two o-dates (o-count 2) and another a single o-date
+		// (o-count 1, which shares the "low" bucket with 0)
+		if _, err := db.Scene.AddO(ctx, sceneIDs[sceneIdxWithGroup], nil); err != nil {
+			return err
+		}
+		if _, err := db.Scene.AddO(ctx, sceneIDs[sceneIdxWithGroup], nil); err != nil {
+			return err
+		}
+		if _, err := db.Scene.AddO(ctx, sceneIDs[sceneIdxWithGallery], nil); err != nil {
+			return err
+		}
+
+		// bucket ordering invariant: o-counts of 2+ must precede counts of
+		// 0 and 1 (which share the low bucket) in DESC order
+		scenes := queryScene(ctx, t, db.Scene, nil, findFilter)
+		require.Greater(t, len(scenes), 0)
+
+		seenLowBucket := false
+		for _, s := range scenes {
+			count, err := db.Scene.GetOCount(ctx, s.ID)
+			require.NoError(t, err)
+			if count <= 1 {
+				seenLowBucket = true
+				continue
+			}
+			assert.False(t, seenLowBucket,
+				"scene %d with o-count %d must precede low-bucket scenes in DESC order", s.ID, count)
+		}
+
+		// and the opposite in ASC order
+		direction = models.SortDirectionEnumAsc
+		findFilter.Direction = &direction
+
+		scenes = queryScene(ctx, t, db.Scene, nil, findFilter)
+		require.Greater(t, len(scenes), 0)
+
+		seenHighBucket := false
+		for _, s := range scenes {
+			count, err := db.Scene.GetOCount(ctx, s.ID)
+			require.NoError(t, err)
+			if count >= 2 {
+				seenHighBucket = true
+				continue
+			}
+			assert.False(t, seenHighBucket,
+				"scene %d with o-count %d must precede high-bucket scenes in ASC order", s.ID, count)
+		}
+
+		return nil
+	})
 }
 
 func TestSceneQueryPagination(t *testing.T) {

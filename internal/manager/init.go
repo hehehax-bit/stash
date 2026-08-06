@@ -109,6 +109,9 @@ func Initialize(cfg *config.Config, l *log.Logger) (*Manager, error) {
 		scanSubs: &subscriptionManager{},
 	}
 
+	mgr.RefreshAIService()
+	mgr.StartAIMaintenance()
+
 	if !cfg.IsNewSystem() {
 		logger.Infof("using config file: %s", cfg.GetConfigFile())
 
@@ -244,6 +247,8 @@ func (s *Manager) postInit(ctx context.Context) error {
 
 	s.RefreshFFMpeg(ctx)
 	s.RefreshStreamManager()
+
+	s.RefreshAIService()
 
 	return nil
 }

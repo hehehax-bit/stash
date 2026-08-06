@@ -12,6 +12,8 @@ type Job {
   status: JobStatus!
   subTasks: [String!]
   description: String!
+  "Job type categorisation (e.g. ai). Empty for general library jobs."
+  type: String!
   progress: Float
   startTime: Time
   endTime: Time

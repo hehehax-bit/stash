@@ -14,6 +14,18 @@ import (
 	"github.com/stashapp/stash/pkg/studio"
 )
 
+func (r *tagResolver) HasEmbedding(ctx context.Context, obj *models.Tag) (bool, error) {
+	var has bool
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		has, err = r.repository.Embedding.HasEmbedding(ctx, "tag", obj.ID)
+		return err
+	}); err != nil {
+		return false, err
+	}
+	return has, nil
+}
+
 func (r *tagResolver) Parents(ctx context.Context, obj *models.Tag) (ret []*models.Tag, err error) {
 	if !obj.ParentIDs.Loaded() {
 		if err := r.withReadTxn(ctx, func(ctx context.Context) error {

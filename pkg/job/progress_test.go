@@ -148,3 +148,38 @@ func TestExecuteTask(t *testing.T) {
 	assert.Len(j.Details, 0)
 	m.mutex.Unlock()
 }
+
+func TestProgressSetTaskDescription(t *testing.T) {
+	m := NewManager()
+	j := &Job{}
+
+	p := createProgress(m, j)
+
+	c := make(chan struct{}, 1)
+	go p.ExecuteTask("taskDescription", func() {
+		<-c
+	})
+
+	time.Sleep(sleepTime)
+
+	assert := assert.New(t)
+
+	p.SetTaskDescription("updatedDescription")
+
+	m.mutex.Lock()
+	// ensure task description was updated
+	assert.Equal("updatedDescription", j.Details[0])
+	m.mutex.Unlock()
+
+	// no-op when no task is active
+	p.SetTaskDescription("noTask")
+
+	close(c)
+
+	time.Sleep(sleepTime)
+
+	m.mutex.Lock()
+	// ensure task is removed from the job details
+	assert.Len(j.Details, 0)
+	m.mutex.Unlock()
+}

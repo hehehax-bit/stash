@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import cloneDeep from "lodash-es/cloneDeep";
 import Mousetrap from "mousetrap";
 import { ListFilterModel } from "src/models/list-filter/filter";
@@ -17,6 +17,8 @@ import { DeleteEntityDialog } from "../Shared/DeleteEntityDialog";
 import { ExportDialog } from "../Shared/ExportDialog";
 import { tagRelationHook } from "../../core/tags";
 import { TagMergeModal } from "./TagMergeDialog";
+import { AITagOrganizeDialog } from "../Dialogs/AITagOrganizeDialog/AITagOrganizeDialog";
+import { faMagic } from "@fortawesome/free-solid-svg-icons";
 import { TagCardGrid } from "./TagCardGrid";
 import { EditTagsDialog } from "./EditTagsDialog";
 import { View } from "../List/views";
@@ -232,6 +234,8 @@ export const FilteredTagList = PatchComponent(
 
     const { filter, setFilter } = filterState;
 
+    const [showOrganize, setShowOrganize] = useState(false);
+
     const { effectiveFilter, result, cachedResult, items, totalCount } =
       queryResult;
 
@@ -385,6 +389,11 @@ export const FilteredTagList = PatchComponent(
         text: intl.formatMessage({ id: "actions.export_all" }),
         onClick: () => onExport(true),
       },
+      {
+        text: intl.formatMessage({ id: "actions.organize" }),
+        onClick: () => setShowOrganize(true),
+        icon: faMagic,
+      },
     ];
 
     // render
@@ -408,6 +417,9 @@ export const FilteredTagList = PatchComponent(
         })}
       >
         {modal}
+        {showOrganize && (
+          <AITagOrganizeDialog onClose={() => setShowOrganize(false)} />
+        )}
 
         <SidebarStateContext.Provider value={{ sectionOpen, setSectionOpen }}>
           <SidebarPane hideSidebar={!showSidebar}>

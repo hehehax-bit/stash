@@ -24,6 +24,10 @@ type task struct {
 }
 
 func (p *Progress) updated() {
+	if p.updater == nil {
+		return
+	}
+
 	var details []string
 	for _, t := range p.currentTasks {
 		details = append(details, t.description)
@@ -173,4 +177,19 @@ func (p *Progress) ExecuteTask(description string, fn func()) {
 	p.addTask(t)
 	defer p.removeTask(t)
 	fn()
+}
+
+// SetTaskDescription updates the description of the most recently added task,
+// causing an update to be pushed to the parent job. It is a no-op if no task
+// is currently active.
+func (p *Progress) SetTaskDescription(description string) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	if len(p.currentTasks) == 0 {
+		return
+	}
+
+	p.currentTasks[0].description = description
+	p.updated()
 }

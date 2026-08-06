@@ -133,6 +133,7 @@ func (qb *sceneFilterHandler) criterionHandler() criterionHandler {
 		qb.codecCriterionHandler(sceneFilter.AudioCodec, "video_files.audio_codec", qb.addVideoFilesTable),
 
 		qb.hasMarkersCriterionHandler(sceneFilter.HasMarkers),
+		hasEmbeddingCriterionHandler(sceneFilter.HasEmbedding, "scene", "scenes.id"),
 		qb.isMissingCriterionHandler(sceneFilter.IsMissing),
 		qb.urlsCriterionHandler(sceneFilter.URL),
 

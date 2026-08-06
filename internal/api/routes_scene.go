@@ -161,6 +161,11 @@ func (rs sceneRoutes) streamTranscode(w http.ResponseWriter, r *http.Request, st
 		StartTime:  ss,
 	}
 
+	maxLoopDuration := config.GetInstance().GetMaximumLoopDuration()
+	if maxLoopDuration != 0 && f.Duration > 0 && f.Duration < float64(maxLoopDuration) {
+		options.Loop = true
+	}
+
 	logger.Debugf("[transcode] streaming scene %d as %s", scene.ID, streamType.MimeType)
 	streamManager.ServeTranscode(w, r, options)
 }

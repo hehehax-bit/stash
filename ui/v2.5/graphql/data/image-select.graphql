@@ -1,0 +1,14 @@
+fragment SelectImageData on Image {
+  id
+  title
+  code
+  date
+  paths {
+    thumbnail
+  }
+  visual_files {
+    ... on BaseFile {
+      path
+    }
+  }
+}

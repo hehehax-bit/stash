@@ -20,6 +20,8 @@ import { TextField, URLField, URLsField } from "src/utils/field";
 import { StashIDPill } from "src/components/Shared/StashID";
 import { PatchComponent } from "../../../patch";
 import { FileSize } from "src/components/Shared/FileSize";
+import MediaQualityDisplay from "./MediaQualityDisplay";
+import AudioAnalysisDisplay from "./AudioAnalysisDisplay";
 
 interface IFileInfoPanelProps {
   sceneID: string;
@@ -302,6 +304,10 @@ const _SceneFileInfoPanel: React.FC<ISceneFileInfoPanelProps> = (
         <URLsField id="urls" urls={props.scene.urls} truncate />
         {renderStashIDs()}
       </dl>
+
+      <MediaQualityDisplay entityType="scene" entityID={props.scene.id} />
+
+      <AudioAnalysisDisplay sceneID={props.scene.id} />
 
       {filesPanel}
     </>

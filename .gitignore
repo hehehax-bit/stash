@@ -2,6 +2,10 @@
 # Go
 ####
 
+# Go workspace (multi-module)
+go.work
+go.work.sum
+
 # Vendored dependencies
 vendor
 
@@ -55,6 +59,7 @@ ui/login/locales/*
 ####
 
 node_modules
+.pnpm-store/
 
 *.db
 
@@ -63,4 +68,21 @@ node_modules
 /phasher
 dist
 .DS_Store
+.fseventsd
+Thumbs.db
+*.lnk
+
+# Environment files (may contain secrets)
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# Editor swap/backup files
+*.swp
+*.swo
+*~
+
 /.local*

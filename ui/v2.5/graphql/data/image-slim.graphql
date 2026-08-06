@@ -9,6 +9,7 @@ fragment SlimImageData on Image {
   rating100
   organized
   o_counter
+  has_embedding
 
   paths {
     thumbnail

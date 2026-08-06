@@ -147,6 +147,7 @@ type TranscodeOptions struct {
 	VideoFile  *models.VideoFile
 	Resolution string
 	StartTime  float64
+	Loop       bool
 }
 
 func (o TranscodeOptions) FileGetCodec(sm *StreamManager, maxTranscodeSize int) (codec VideoCodec) {
@@ -207,6 +208,10 @@ func (o TranscodeOptions) makeStreamArgs(sm *StreamManager) Args {
 			args = args.NoAccurateSeek()
 		}
 		args = args.Seek(o.StartTime)
+	}
+
+	if o.Loop {
+		args = args.StreamLoop(-1)
 	}
 
 	args = args.Input(o.VideoFile.Path)

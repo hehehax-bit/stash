@@ -36,6 +36,7 @@ import {
 import { FileSize } from "../Shared/FileSize";
 import { PatchComponent, PatchContainerComponent } from "src/patch";
 import { GenerateDialog } from "../Dialogs/GenerateDialog";
+import { AIImageTagDialog } from "../Dialogs/AIImageTagDialog/AIImageTagDialog";
 import {
   Sidebar,
   SidebarPane,
@@ -64,6 +65,7 @@ import { SidebarRatingFilter } from "../List/Filters/RatingFilter";
 import { SidebarBooleanFilter } from "../List/Filters/BooleanFilter";
 import { Button } from "react-bootstrap";
 import { OrganizedCriterionOption } from "src/models/list-filter/criteria/organized";
+import { HasEmbeddingCriterionOption } from "src/models/list-filter/criteria/has-embedding";
 import { SidebarAgeFilter } from "../List/Filters/SidebarAgeFilter";
 import { PerformerAgeCriterionOption } from "src/models/list-filter/images";
 import { SidebarFolderFilter } from "../List/Filters/FolderFilter";
@@ -449,6 +451,14 @@ const SidebarContent: React.FC<{
           setFilter={setFilter}
           sectionID="organized"
         />
+        <SidebarBooleanFilter
+          title={<FormattedMessage id="hasEmbedding" />}
+          data-type={HasEmbeddingCriterionOption.type}
+          option={HasEmbeddingCriterionOption}
+          filter={filter}
+          setFilter={setFilter}
+          sectionID="hasEmbedding"
+        />
         <SidebarAgeFilter
           title={<FormattedMessage id="performer_age" />}
           option={PerformerAgeCriterionOption}
@@ -695,6 +705,18 @@ export const FilteredImageList = PatchComponent(
           showModal(
             <GenerateDialog
               type="image"
+              selectedIds={Array.from(selectedIds.values())}
+              onClose={() => closeModal()}
+            />
+          );
+        },
+        isDisplayed: () => hasSelection,
+      },
+      {
+        text: "AI Tag…",
+        onClick: () => {
+          showModal(
+            <AIImageTagDialog
               selectedIds={Array.from(selectedIds.values())}
               onClose={() => closeModal()}
             />

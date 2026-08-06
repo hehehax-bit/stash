@@ -18,6 +18,10 @@ import { ExportDialog } from "../Shared/ExportDialog";
 import { SceneCardGrid } from "./SceneCardGrid";
 import { TaggerContext } from "../Tagger/context";
 import { IdentifyDialog } from "../Dialogs/IdentifyDialog/IdentifyDialog";
+import { AISceneTagDialog } from "../Dialogs/AISceneTagDialog/AISceneTagDialog";
+import { AIAudioAnalysisDialog } from "../Dialogs/AIAudioAnalysisDialog/AIAudioAnalysisDialog";
+import { mutateMetadataDetectLooping } from "src/core/StashService";
+import { useToast } from "src/hooks/Toast";
 import { useConfigurationContext } from "src/hooks/Config";
 import { SceneMergeModal } from "./SceneMergeDialog";
 import { objectTitle } from "src/core/files";
@@ -42,6 +46,7 @@ import cx from "classnames";
 import { SidebarRatingFilter } from "../List/Filters/RatingFilter";
 import { OrganizedCriterionOption } from "src/models/list-filter/criteria/organized";
 import { HasMarkersCriterionOption } from "src/models/list-filter/criteria/has-markers";
+import { HasEmbeddingCriterionOption } from "src/models/list-filter/criteria/has-embedding";
 import { SidebarBooleanFilter } from "../List/Filters/BooleanFilter";
 import { PerformerAgeCriterionOption } from "src/models/list-filter/scenes";
 import { SidebarDuplicateFilter } from "../List/Filters/DuplicateFilter";
@@ -321,6 +326,14 @@ const SidebarContent: React.FC<{
           sectionID="hasMarkers"
         />
         <SidebarBooleanFilter
+          title={<FormattedMessage id="hasEmbedding" />}
+          data-type={HasEmbeddingCriterionOption.type}
+          option={HasEmbeddingCriterionOption}
+          filter={filter}
+          setFilter={setFilter}
+          sectionID="hasEmbedding"
+        />
+        <SidebarBooleanFilter
           title={<FormattedMessage id="organized" />}
           data-type={OrganizedCriterionOption.type}
           option={OrganizedCriterionOption}
@@ -412,6 +425,7 @@ export const FilteredSceneList = PatchComponent(
     } = listSelect;
 
     const { modal, showModal, closeModal } = modalState;
+    const Toast = useToast();
 
     // Utility hooks
     const { setPage, removeCriterion, clearAllCriteria } = useFilterOperations({
@@ -602,6 +616,47 @@ export const FilteredSceneList = PatchComponent(
         onClick: () =>
           showModal(
             <IdentifyDialog
+              selectedIds={Array.from(selectedIds.values())}
+              onClose={() => closeModal()}
+            />
+          ),
+        isDisplayed: () => hasSelection,
+      },
+      {
+        text: "AI Tag…",
+        onClick: () =>
+          showModal(
+            <AISceneTagDialog
+              selectedIds={Array.from(selectedIds.values())}
+              onClose={() => closeModal()}
+            />
+          ),
+        isDisplayed: () => hasSelection,
+      },
+      {
+        text: "Detect loops…",
+        onClick: async () => {
+          try {
+            await mutateMetadataDetectLooping({
+              sceneIds: Array.from(selectedIds.values()),
+            });
+            Toast.success(
+              intl.formatMessage(
+                { id: "config.tasks.added_job_to_queue" },
+                { operation_name: "Detect Looping Videos" }
+              )
+            );
+          } catch (e) {
+            Toast.error(e);
+          }
+        },
+        isDisplayed: () => hasSelection,
+      },
+      {
+        text: "Analyze audio…",
+        onClick: () =>
+          showModal(
+            <AIAudioAnalysisDialog
               selectedIds={Array.from(selectedIds.values())}
               onClose={() => closeModal()}
             />

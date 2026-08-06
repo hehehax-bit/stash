@@ -32,6 +32,7 @@ import {
   faMapMarkerAlt,
   faPlayCircle,
   faQuestionCircle,
+  faRobot,
   faSignOutAlt,
   faTag,
   faTimes,
@@ -93,6 +94,10 @@ const messages = defineMessages({
   statistics: {
     id: "statistics",
     defaultMessage: "Statistics",
+  },
+  aiChat: {
+    id: "aiChat",
+    defaultMessage: "AI Chat",
   },
 });
 
@@ -158,6 +163,13 @@ const allMenuItems: IMenuItem[] = [
     icon: faTag,
     hotkey: "g t",
     userCreatable: true,
+  },
+  {
+    name: "aiChat",
+    message: messages.aiChat,
+    href: "/aiChat",
+    icon: faRobot,
+    hotkey: "g a",
   },
 ];
 

@@ -47,6 +47,11 @@ func (a Args) Duration(seconds float64) Args {
 	return append(a, "-t", fmt.Sprint(seconds))
 }
 
+// StreamLoop adds -stream_loop to loop the input n times (-1 for infinite).
+func (a Args) StreamLoop(count int) Args {
+	return append(a, "-stream_loop", fmt.Sprint(count))
+}
+
 // Input adds the input (-i) and returns the result.
 func (a Args) Input(i string) Args {
 	return append(a, "-i", i)

@@ -33,6 +33,7 @@ fragment SlimPerformerData on Performer {
   rating100
   death_date
   weight
+  has_embedding
 }
 
 fragment SelectPerformerData on Performer {

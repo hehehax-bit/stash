@@ -16,6 +16,7 @@ import (
 	"github.com/stashapp/stash/internal/dlna"
 	"github.com/stashapp/stash/internal/log"
 	"github.com/stashapp/stash/internal/manager/config"
+	"github.com/stashapp/stash/pkg/ai"
 	"github.com/stashapp/stash/pkg/ffmpeg"
 	"github.com/stashapp/stash/pkg/fsutil"
 	"github.com/stashapp/stash/pkg/job"
@@ -49,6 +50,8 @@ type Manager struct {
 	JobManager      *job.Manager
 	ReadLockManager *fsutil.ReadLockManager
 
+	aiMaintenance *aiMaintenanceScheduler
+
 	DownloadStore *DownloadStore
 	SessionStore  *session.Store
 
@@ -67,6 +70,8 @@ type Manager struct {
 	ImageService   ImageService
 	GalleryService GalleryService
 	GroupService   GroupService
+
+	AIService *ai.ChatService
 
 	scanSubs *subscriptionManager
 }
@@ -408,4 +413,45 @@ func (s *Manager) Shutdown() {
 	if err != nil {
 		logger.Errorf("Error closing database: %s", err)
 	}
+}
+
+func (s *Manager) RefreshAIService() {
+	baseURL := s.Config.GetAIBaseURL()
+	model := s.Config.GetAIModel()
+
+	client := ai.NewClient(baseURL, model)
+	ffmpegPath := ""
+	if s.FFMpeg != nil {
+		ffmpegPath = s.FFMpeg.Path()
+	}
+	embedModel := s.Config.GetAIEmbeddingModel()
+	if embedModel == "" {
+		embedModel = model
+	}
+	toolCfg := ai.ToolConfig{
+		A1111BaseURL:   s.Config.GetAIAutomatic1111BaseURL(),
+		A1111Enabled:   s.Config.GetAIAutomatic1111Enabled(),
+		GeneratedPath:  s.Config.GetGeneratedPath(),
+		LLMBaseURL:     baseURL,
+		LLMModel:       model,
+		EmbeddingModel: embedModel,
+		FFMpegPath:     ffmpegPath,
+		MaxTokens:      s.Config.GetAIMaxTokens(),
+		StartEmbeddingJob: func(ctx context.Context, entityTypes []string, overwrite bool) (int, error) {
+			return s.AIEmbedding(ctx, AIEmbeddingInput{
+				EntityTypes: entityTypes,
+				Overwrite:   overwrite,
+			})
+		},
+		StartSceneSegmentJob: func(ctx context.Context, sceneIDs []int, maxScenes *int, overwrite bool) (int, error) {
+			return s.AISceneSegment(ctx, AISceneSegmentInput{
+				SceneIDs:  sceneIDs,
+				MaxScenes: maxScenes,
+				Overwrite: overwrite,
+			})
+		},
+	}
+	s.AIService = ai.NewChatService(client, s.Repository, s.Config.GetAISystemPrompt())
+	s.AIService.SetToolConfig(toolCfg)
+	s.AIService.SetEnabled(s.Config.GetAIEnabled())
 }

@@ -1,0 +1,168 @@
+mutation ConfigureAI($input: AIConfigInput!) {
+  configureAI(input: $input) {
+    enabled
+    base_url
+    model
+    embedding_model
+    system_prompt
+    automatic1111_enabled
+    automatic1111_base_url
+    transcription_base_url
+    transcription_model
+    tag
+  }
+}
+
+mutation AIChatSend($input: AIChatSendInput!) {
+  aiChatSend(input: $input) {
+    id
+    session_id
+    role
+    content
+    created_at
+  }
+}
+
+mutation AIChatClear($session_id: ID!) {
+  aiChatClear(session_id: $session_id)
+}
+
+mutation AIChatDeleteMessage($message_id: ID!) {
+  aiChatDeleteMessage(message_id: $message_id)
+}
+
+mutation MetadataAIPerformerCluster($input: AIPerformerClusterInput!) {
+  metadataAIPerformerCluster(input: $input)
+}
+
+mutation MetadataAISceneSegment($input: AISceneSegmentInput!) {
+  metadataAISceneSegment(input: $input)
+}
+
+mutation MetadataAISuggestionGenerate($input: AISuggestionInput!) {
+  metadataAISuggestionGenerate(input: $input)
+}
+
+mutation MetadataAIMediaQuality($input: AIMediaQualityInput!) {
+  metadataAIMediaQuality(input: $input)
+}
+
+mutation MetadataAIAudioAnalyze($input: AIAudioAnalyzeInput!) {
+  metadataAIAudioAnalyze(input: $input)
+}
+
+mutation MetadataAIPerformerCareer($input: AIPerformerCareerInput!) {
+  metadataAIPerformerCareer(input: $input)
+}
+
+mutation MetadataAISmartCollections($input: AISmartCollectionsInput!) {
+  metadataAISmartCollections(input: $input)
+}
+
+mutation MetadataAIFileRename($input: AIFileRenameInput!) {
+  metadataAIFileRename(input: $input)
+}
+
+mutation AiSuggestionApply($input: AISuggestionApplyInput!) {
+  aiSuggestionApply(input: $input)
+}
+
+mutation AiSuggestionReject($suggestion_id: ID!) {
+  aiSuggestionReject(suggestion_id: $suggestion_id)
+}
+
+mutation AiFileRenameApply($input: AIFileRenameApplyInput!) {
+  aiFileRenameApply(input: $input)
+}
+
+mutation AiFileRenameReject($rename_id: ID!) {
+  aiFileRenameReject(rename_id: $rename_id)
+}
+
+mutation MetadataAIPerformerMergeSuggest(
+  $input: AIPerformerMergeSuggestInput!
+) {
+  metadataAIPerformerMergeSuggest(input: $input)
+}
+
+mutation AiPerformerSuggestionApply($suggestion_id: ID!) {
+  aiPerformerSuggestionApply(suggestion_id: $suggestion_id)
+}
+
+mutation AiPerformerSuggestionReject($suggestion_id: ID!) {
+  aiPerformerSuggestionReject(suggestion_id: $suggestion_id)
+}
+
+mutation MetadataAIAudit($input: AIAuditInput!) {
+  metadataAIAudit(input: $input)
+}
+
+mutation AiAuditApply($audit_id: ID!) {
+  aiAuditApply(audit_id: $audit_id)
+}
+
+mutation AiAuditReject($audit_id: ID!) {
+  aiAuditReject(audit_id: $audit_id)
+}
+
+mutation MetadataAITranslate($input: AITranslateInput!) {
+  metadataAITranslate(input: $input)
+}
+
+mutation AiTranslationApply($translation_id: ID!) {
+  aiTranslationApply(translation_id: $translation_id)
+}
+
+mutation AiTranslationReject($translation_id: ID!) {
+  aiTranslationReject(translation_id: $translation_id)
+}
+
+mutation MetadataAIPerformerDiscovery($input: AIPerformerDiscoveryInput!) {
+  metadataAIPerformerDiscovery(input: $input)
+}
+
+mutation AiPerformerCandidateApply(
+  $candidate_id: ID!
+  $target_performer_id: ID
+) {
+  aiPerformerCandidateApply(
+    candidate_id: $candidate_id
+    target_performer_id: $target_performer_id
+  )
+}
+
+mutation AiPerformerCandidateReject($candidate_id: ID!) {
+  aiPerformerCandidateReject(candidate_id: $candidate_id)
+}
+
+mutation AiAuditApplyAll {
+  aiAuditApplyAll
+}
+
+mutation AiAuditRejectAll {
+  aiAuditRejectAll
+}
+
+mutation AiTranslationApplyAll {
+  aiTranslationApplyAll
+}
+
+mutation AiTranslationRejectAll {
+  aiTranslationRejectAll
+}
+
+mutation AiPerformerSuggestionApplyAll {
+  aiPerformerSuggestionApplyAll
+}
+
+mutation AiPerformerSuggestionRejectAll {
+  aiPerformerSuggestionRejectAll
+}
+
+mutation AiPerformerCandidateApplyAll {
+  aiPerformerCandidateApplyAll
+}
+
+mutation AiPerformerCandidateRejectAll {
+  aiPerformerCandidateRejectAll
+}

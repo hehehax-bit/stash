@@ -251,6 +251,37 @@ type Query {
   # System status
   systemStatus: SystemStatus!
 
+  # AI
+  aiConfig: AIConfig!
+  aiEmbeddingStats: AIEmbeddingStats!
+  aiChatSessions: [AIChatSession!]!
+  aiChatHistory(session_id: ID!): [AIChatMessage!]!
+  semanticSearch(input: SemanticSearchInput!): [SemanticSearchResult!]!
+  similarToEntity(entity_type: String!, entity_id: ID!, model: String, limit: Int): [SimilarToEntityResult!]!
+  "Searches scene audio transcripts for the given text."
+  aiSceneAudioSearch(query: String!, limit: Int): [AISceneAudio!]!
+  semanticDuplicates(input: SemanticDuplicateInput!): [SemanticDuplicateGroup!]!
+  "AI suggestions for scenes/images, filtered by status (pending/accepted/rejected)."
+  aiSuggestions(status: String, entity_type: String): [AISuggestion!]!
+  "Performer merge suggestions, filtered by status (pending/accepted/rejected)."
+  aiPerformerMergeSuggestions(status: String): [AIPerformerMergeSuggestion!]!
+  "Timeline appearances of a performer: scene markers attributed to them during AI segmentation."
+  aiPerformerAppearances(performer_id: ID!, limit: Int): [AIPerformerAppearance!]!
+  "AI audit findings, filtered by status (pending/accepted/rejected)."
+  aiAudits(status: String): [AIAudit!]!
+  "AI translations, filtered by status (pending/accepted/rejected)."
+  aiTranslations(status: String): [AITranslation!]!
+  "Discovered performer candidates, filtered by status (pending/accepted/rejected)."
+  aiPerformerCandidates(status: String): [AIPerformerCandidate!]!
+  "AI quality assessment for a scene or image"
+  aiMediaQuality(entity_type: String!, entity_id: ID!): AIMediaQuality
+  "AI audio analysis for a scene"
+  aiSceneAudio(scene_id: ID!): AISceneAudio
+  "AI career profile for a performer"
+  aiPerformerCareer(performer_id: ID!): AIPerformerCareer
+  "AI filename rename suggestions, filtered by status (pending/applied/rejected)"
+  aiFileRenames(status: String): [AIFileRename!]!
+
   # Job status
   jobQueue: [Job!]
   findJob(input: FindJobInput!): Job
@@ -487,6 +518,82 @@ type Mutation {
   metadataCleanGenerated(input: CleanGeneratedInput!): ID!
   "Identifies scenes using scrapers. Returns the job ID"
   metadataIdentify(input: IdentifyMetadataInput!): ID!
+  "Identifies images using AI. Returns the job ID"
+  metadataAIImageTag(input: AIImageTagInput!): ID!
+  "Identifies a performer using AI. Returns the job ID"
+  metadataAIPerformerTag(input: AIPerformerTagInput!): ID!
+  "Identifies scenes using AI. Returns the job ID"
+  metadataAISceneTag(input: AISceneTagInput!): ID!
+  "Detects looping videos and tags them. Returns the job ID"
+  metadataDetectLooping(input: DetectLoopingInput!): ID!
+  "Generates AI embeddings for entities. Returns the job ID"
+  metadataAIEmbedding(input: AIEmbeddingInput!): ID!
+  "Organizes tags using AI. Returns the job ID"
+  metadataAITagOrganize(input: AITagOrganizeInput!): ID!
+  "Clusters performer appearances across scenes and images using AI. Returns the job ID"
+  metadataAIPerformerCluster(input: AIPerformerClusterInput!): ID!
+  "Generates performer merge suggestions using AI. Returns the job ID"
+  metadataAIPerformerMergeSuggest(input: AIPerformerMergeSuggestInput!): ID!
+  "Merges the source performer of a suggestion into the target and marks it accepted"
+  aiPerformerSuggestionApply(suggestion_id: ID!): Boolean!
+  "Rejects a performer merge suggestion"
+  aiPerformerSuggestionReject(suggestion_id: ID!): Boolean!
+  "Re-audits previously AI-tagged scenes/images. Returns the job ID"
+  metadataAIAudit(input: AIAuditInput!): ID!
+  "Applies an audit finding to its target entity and marks it accepted"
+  aiAuditApply(audit_id: ID!): Boolean!
+  "Rejects an audit finding"
+  aiAuditReject(audit_id: ID!): Boolean!
+  "Translates scene, image, and performer text using AI. Returns the job ID"
+  metadataAITranslate(input: AITranslateInput!): ID!
+  "Applies a translation to its target entity and marks it accepted"
+  aiTranslationApply(translation_id: ID!): Boolean!
+  "Rejects a translation"
+  aiTranslationReject(translation_id: ID!): Boolean!
+  "Discovers recurring unknown performers across the library. Returns the job ID"
+  metadataAIPerformerDiscovery(input: AIPerformerDiscoveryInput!): ID!
+  "Creates a performer from a candidate (or attaches its members to an existing one) and marks it accepted"
+  aiPerformerCandidateApply(candidate_id: ID!, target_performer_id: ID): Boolean!
+  "Rejects a performer candidate"
+  aiPerformerCandidateReject(candidate_id: ID!): Boolean!
+  "Applies all pending AI audit findings. Returns the number applied"
+  aiAuditApplyAll: Int!
+  "Rejects all pending AI audit findings. Returns the number rejected"
+  aiAuditRejectAll: Int!
+  "Applies all pending AI translations. Returns the number applied"
+  aiTranslationApplyAll: Int!
+  "Rejects all pending AI translations. Returns the number rejected"
+  aiTranslationRejectAll: Int!
+  "Applies all pending performer merge suggestions. Returns the number applied"
+  aiPerformerSuggestionApplyAll: Int!
+  "Rejects all pending performer merge suggestions. Returns the number rejected"
+  aiPerformerSuggestionRejectAll: Int!
+  "Creates performers from all pending candidates. Returns the number created"
+  aiPerformerCandidateApplyAll: Int!
+  "Rejects all pending performer candidates. Returns the number rejected"
+  aiPerformerCandidateRejectAll: Int!
+  "Segments scenes into markers using AI. Returns the job ID"
+  metadataAISceneSegment(input: AISceneSegmentInput!): ID!
+  "Generates AI tagging suggestions without applying them. Returns the job ID"
+  metadataAISuggestionGenerate(input: AISuggestionInput!): ID!
+  "Applies an AI suggestion to its target scene/image and marks it accepted"
+  aiSuggestionApply(input: AISuggestionApplyInput!): Boolean!
+  "Rejects an AI suggestion"
+  aiSuggestionReject(suggestion_id: ID!): Boolean!
+  "Assesses scene/image technical quality using AI. Returns the job ID"
+  metadataAIMediaQuality(input: AIMediaQualityInput!): ID!
+  "Analyzes scene audio (silence ratio, transcription, classification). Returns the job ID"
+  metadataAIAudioAnalyze(input: AIAudioAnalyzeInput!): ID!
+  "Generates AI career profiles for performers. Returns the job ID"
+  metadataAIPerformerCareer(input: AIPerformerCareerInput!): ID!
+  "Generates AI smart collections (saved filters) from library statistics. Returns the job ID"
+  metadataAISmartCollections(input: AISmartCollectionsInput!): ID!
+  "Generates AI filename rename suggestions. Returns the job ID"
+  metadataAIFileRename(input: AIFileRenameInput!): ID!
+  "Renames the file on disk and updates the database for a pending rename suggestion"
+  aiFileRenameApply(input: AIFileRenameApplyInput!): Boolean!
+  "Rejects an AI filename rename suggestion"
+  aiFileRenameReject(rename_id: ID!): Boolean!
 
   "Migrate generated files for the current hash naming"
   migrateHashNaming: ID!
@@ -579,6 +686,15 @@ type Mutation {
 
   "DANGEROUS: Execute an arbitrary SQL statement without returning any rows."
   execSQL(sql: String!, args: [Any]): SQLExecResult!
+
+  "AI: configure the AI assistant"
+  configureAI(input: AIConfigInput!): AIConfig!
+  "AI: send a message to the AI assistant"
+  aiChatSend(input: AIChatSendInput!): AIChatMessage!
+  "AI: clear chat history for a session"
+  aiChatClear(session_id: ID!): Boolean!
+  "AI: delete a single chat message"
+  aiChatDeleteMessage(message_id: ID!): Boolean!
 
   "Run batch performer tag task. Returns the job ID."
   stashBoxBatchPerformerTag(input: StashBoxBatchTagInput!): String!

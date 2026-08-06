@@ -30,6 +30,19 @@ query FindImagesMetadata(
   }
 }
 
+query FindImagesForSelect(
+  $filter: FindFilterType
+  $image_filter: ImageFilterType
+  $ids: [ID!]
+) {
+  findImages(filter: $filter, image_filter: $image_filter, ids: $ids) {
+    count
+    images {
+      ...SelectImageData
+    }
+  }
+}
+
 query FindImage($id: ID!, $checksum: String) {
   findImage(id: $id, checksum: $checksum) {
     ...ImageData

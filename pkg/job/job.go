@@ -54,6 +54,8 @@ type Job struct {
 	// details of the current operations of the job
 	Details     []string
 	Description string
+	// type categorises the job, e.g. "ai". Empty for general library jobs.
+	Type string
 	// Progress in terms of 0 - 1.
 	Progress  float64
 	StartTime *time.Time

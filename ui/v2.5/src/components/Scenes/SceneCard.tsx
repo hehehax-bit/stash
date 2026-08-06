@@ -4,6 +4,7 @@ import { useHistory } from "react-router-dom";
 import cx from "classnames";
 import * as GQL from "src/core/generated-graphql";
 import { Icon } from "../Shared/Icon";
+import { EmbeddingBadge } from "../Shared/EmbeddingBadge";
 import { GalleryLink, TagLink, SceneMarkerLink } from "../Shared/TagLink";
 import { HoverPopover } from "../Shared/HoverPopover";
 import { TruncatedText } from "../Shared/TruncatedText";
@@ -444,6 +445,7 @@ const SceneCardImage = React.memo(
         <RatingBanner rating={props.scene.rating100} />
         <SceneSpecsOverlay scene={props.scene} />
         {maybeRenderInteractiveSpeedOverlay()}
+        {props.scene.has_embedding && <EmbeddingBadge />}
       </>
     );
   })

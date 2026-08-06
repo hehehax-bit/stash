@@ -3,6 +3,7 @@ import { Button, ButtonGroup } from "react-bootstrap";
 import cx from "classnames";
 import * as GQL from "src/core/generated-graphql";
 import { Icon } from "src/components/Shared/Icon";
+import { EmbeddingBadge } from "src/components/Shared/EmbeddingBadge";
 import { GalleryLink, TagLink } from "src/components/Shared/TagLink";
 import { HoverPopover } from "src/components/Shared/HoverPopover";
 import { PerformerPopoverButton } from "src/components/Shared/PerformerPopoverButton";
@@ -202,6 +203,7 @@ const ImageCardImage = PatchComponent(
           ) : undefined}
         </div>
         <RatingBanner rating={props.image.rating100} />
+        {props.image.has_embedding && <EmbeddingBadge />}
       </>
     );
   }

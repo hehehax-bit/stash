@@ -9,6 +9,7 @@ interface IButton {
   text?: string;
   variant?: ButtonVariant;
   onClick?: () => void;
+  disabled?: boolean;
 }
 
 interface IModal {

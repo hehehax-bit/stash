@@ -10,6 +10,8 @@ type Tag {
   updated_at: Time!
   favorite: Boolean!
   stash_ids: [StashID!]!
+  "Whether an AI embedding exists for this tag"
+  has_embedding: Boolean!
   image_path: String # Resolver
   scene_count(depth: Int): Int! # Resolver
   scene_marker_count(depth: Int): Int! # Resolver

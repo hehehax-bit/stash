@@ -91,6 +91,7 @@ func (qb *imageFilterHandler) criterionHandler() criterionHandler {
 		resolutionCriterionHandler(imageFilter.Resolution, "image_files.height", "image_files.width", imageRepository.addImageFilesTable),
 		orientationCriterionHandler(imageFilter.Orientation, "image_files.height", "image_files.width", imageRepository.addImageFilesTable),
 		qb.missingCriterionHandler(imageFilter.IsMissing),
+		hasEmbeddingCriterionHandler(imageFilter.HasEmbedding, "image", "images.id"),
 
 		qb.tagsCriterionHandler(imageFilter.Tags),
 		qb.tagCountCriterionHandler(imageFilter.TagCount),

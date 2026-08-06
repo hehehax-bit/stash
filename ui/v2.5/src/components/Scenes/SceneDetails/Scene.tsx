@@ -13,6 +13,7 @@ import { Helmet } from "react-helmet";
 import * as GQL from "src/core/generated-graphql";
 import {
   mutateMetadataScan,
+  mutateMetadataAISceneTag,
   useFindScene,
   useSceneIncrementO,
   useSceneGenerateScreenshot,
@@ -196,6 +197,7 @@ const ScenePage: React.FC<IProps> = PatchComponent("ScenePage", (props) => {
   const [generateScreenshot] = useSceneGenerateScreenshot();
   const [screenshotJobID, setScreenshotJobID] = useState<string>();
   const { configuration } = useConfigurationContext();
+  const { data: aiConfig } = GQL.useAiConfigQuery();
   const { showStudioText } = configuration?.ui ?? {};
 
   const [showDraftModal, setShowDraftModal] = useState(false);
@@ -249,6 +251,34 @@ const ScenePage: React.FC<IProps> = PatchComponent("ScenePage", (props) => {
       Toast.error(e);
     }
   };
+
+  async function onAIDetectPerformers() {
+    try {
+      await mutateMetadataAISceneTag({
+        sceneIds: [scene.id],
+        createMissingPerformers: true,
+        createMissingTags: true,
+        performersOnly: true,
+      });
+      Toast.success(
+        intl.formatMessage(
+          { id: "config.tasks.added_job_to_queue" },
+          { operation_name: "AI Scene Performers" }
+        )
+      );
+    } catch (e) {
+      Toast.error(e);
+    }
+  }
+
+  function onAskAI() {
+    const title = scene.title ?? objectTitle(scene);
+    history.push(
+      `/aiChat?message=${encodeURIComponent(
+        `Analyze this scene: ${title} (id ${scene.id})`
+      )}`
+    );
+  }
 
   function setRating(v: number | null) {
     updateScene({
@@ -501,6 +531,22 @@ const ScenePage: React.FC<IProps> = PatchComponent("ScenePage", (props) => {
           onClick={() => setIsGenerateDialogOpen(true)}
         >
           <FormattedMessage id="actions.generate" />…
+        </Dropdown.Item>
+        {aiConfig?.aiConfig?.enabled && (
+          <Dropdown.Item
+            key="ai-detect-performers"
+            className="bg-secondary text-white"
+            onClick={() => onAIDetectPerformers()}
+          >
+            <FormattedMessage id="actions.ai_detect_performers" />
+          </Dropdown.Item>
+        )}
+        <Dropdown.Item
+          key="ask-ai"
+          className="bg-secondary text-white"
+          onClick={() => onAskAI()}
+        >
+          <FormattedMessage id="actions.ask_ai" />
         </Dropdown.Item>
         {boxes.length > 0 && (
           <Dropdown.Item

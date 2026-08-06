@@ -7,6 +7,8 @@ import { PerformerCard } from "src/components/Performers/PerformerCard";
 import { sortPerformers } from "src/core/performers";
 import { DirectorLink } from "src/components/Shared/Link";
 import { CustomFields } from "src/components/Shared/CustomFields";
+import MediaQualityDisplay from "./MediaQualityDisplay";
+import SimilarItemsPanel from "src/components/Shared/SimilarItemsPanel";
 
 interface ISceneDetailProps {
   scene: GQL.SceneDataFragment;
@@ -107,6 +109,9 @@ export const SceneDetailPanel: React.FC<ISceneDetailProps> = (props) => {
           <CustomFields values={props.scene.custom_fields} fullWidth />
         </div>
       </div>
+
+      <MediaQualityDisplay entityType="scene" entityID={props.scene.id} />
+      <SimilarItemsPanel entityType="scene" entityId={props.scene.id} />
     </>
   );
 };

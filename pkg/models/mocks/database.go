@@ -11,18 +11,30 @@ import (
 )
 
 type Database struct {
-	File           *FileReaderWriter
-	Folder         *FolderReaderWriter
-	Gallery        *GalleryReaderWriter
-	GalleryChapter *GalleryChapterReaderWriter
-	Image          *ImageReaderWriter
-	Group          *GroupReaderWriter
-	Performer      *PerformerReaderWriter
-	Scene          *SceneReaderWriter
-	SceneMarker    *SceneMarkerReaderWriter
-	Studio         *StudioReaderWriter
-	Tag            *TagReaderWriter
-	SavedFilter    *SavedFilterReaderWriter
+	File                  *FileReaderWriter
+	Folder                *FolderReaderWriter
+	Gallery               *GalleryReaderWriter
+	GalleryChapter        *GalleryChapterReaderWriter
+	Image                 *ImageReaderWriter
+	Group                 *GroupReaderWriter
+	Performer             *PerformerReaderWriter
+	Scene                 *SceneReaderWriter
+	SceneMarker           *SceneMarkerReaderWriter
+	Studio                *StudioReaderWriter
+	Tag                   *TagReaderWriter
+	SavedFilter           *SavedFilterReaderWriter
+	AI                    *AIChatReaderWriter
+	Embedding             *EmbeddingReaderWriter
+	Memory                *AIMemoryReaderWriter
+	AISuggestion          *AISuggestionReaderWriter
+	AIMediaQuality        *AIMediaQualityReaderWriter
+	AISceneAudio          *AISceneAudioReaderWriter
+	AIPerformerCareer     *AIPerformerCareerReaderWriter
+	AIFileRename          *AIFileRenameReaderWriter
+	AIPerformerSuggestion *AIPerformerSuggestionReaderWriter
+	AIAudit               *AIAuditReaderWriter
+	AITranslation         *AITranslationReaderWriter
+	AIPerformerCandidate  *AIPerformerCandidateReaderWriter
 }
 
 func (*Database) Begin(ctx context.Context, exclusive bool) (context.Context, error) {
@@ -60,18 +72,30 @@ func (*Database) Reset() error {
 
 func NewDatabase() *Database {
 	return &Database{
-		File:           &FileReaderWriter{},
-		Folder:         &FolderReaderWriter{},
-		Gallery:        &GalleryReaderWriter{},
-		GalleryChapter: &GalleryChapterReaderWriter{},
-		Image:          &ImageReaderWriter{},
-		Group:          &GroupReaderWriter{},
-		Performer:      &PerformerReaderWriter{},
-		Scene:          &SceneReaderWriter{},
-		SceneMarker:    &SceneMarkerReaderWriter{},
-		Studio:         &StudioReaderWriter{},
-		Tag:            &TagReaderWriter{},
-		SavedFilter:    &SavedFilterReaderWriter{},
+		File:                  &FileReaderWriter{},
+		Folder:                &FolderReaderWriter{},
+		Gallery:               &GalleryReaderWriter{},
+		GalleryChapter:        &GalleryChapterReaderWriter{},
+		Image:                 &ImageReaderWriter{},
+		Group:                 &GroupReaderWriter{},
+		Performer:             &PerformerReaderWriter{},
+		Scene:                 &SceneReaderWriter{},
+		SceneMarker:           &SceneMarkerReaderWriter{},
+		Studio:                &StudioReaderWriter{},
+		Tag:                   &TagReaderWriter{},
+		SavedFilter:           &SavedFilterReaderWriter{},
+		AI:                    &AIChatReaderWriter{},
+		Embedding:             &EmbeddingReaderWriter{},
+		Memory:                &AIMemoryReaderWriter{},
+		AISuggestion:          &AISuggestionReaderWriter{},
+		AIMediaQuality:        &AIMediaQualityReaderWriter{},
+		AISceneAudio:          &AISceneAudioReaderWriter{},
+		AIPerformerCareer:     &AIPerformerCareerReaderWriter{},
+		AIFileRename:          &AIFileRenameReaderWriter{},
+		AIPerformerSuggestion: &AIPerformerSuggestionReaderWriter{},
+		AIAudit:               &AIAuditReaderWriter{},
+		AITranslation:         &AITranslationReaderWriter{},
+		AIPerformerCandidate:  &AIPerformerCandidateReaderWriter{},
 	}
 }
 
@@ -88,6 +112,14 @@ func (db *Database) AssertExpectations(t mock.TestingT) {
 	db.Studio.AssertExpectations(t)
 	db.Tag.AssertExpectations(t)
 	db.SavedFilter.AssertExpectations(t)
+	db.AI.AssertExpectations(t)
+	db.Embedding.AssertExpectations(t)
+	db.Memory.AssertExpectations(t)
+	db.AISuggestion.AssertExpectations(t)
+	db.AIMediaQuality.AssertExpectations(t)
+	db.AISceneAudio.AssertExpectations(t)
+	db.AIPerformerCareer.AssertExpectations(t)
+	db.AIFileRename.AssertExpectations(t)
 }
 
 // WithTxnCtx runs fn with a context that has a transaction hook manager registered,
@@ -102,18 +134,30 @@ func (db *Database) WithTxnCtx(fn func(ctx context.Context)) {
 
 func (db *Database) Repository() models.Repository {
 	return models.Repository{
-		TxnManager:     db,
-		File:           db.File,
-		Folder:         db.Folder,
-		Gallery:        db.Gallery,
-		GalleryChapter: db.GalleryChapter,
-		Image:          db.Image,
-		Group:          db.Group,
-		Performer:      db.Performer,
-		Scene:          db.Scene,
-		SceneMarker:    db.SceneMarker,
-		Studio:         db.Studio,
-		Tag:            db.Tag,
-		SavedFilter:    db.SavedFilter,
+		TxnManager:            db,
+		File:                  db.File,
+		Folder:                db.Folder,
+		Gallery:               db.Gallery,
+		GalleryChapter:        db.GalleryChapter,
+		Image:                 db.Image,
+		Group:                 db.Group,
+		Performer:             db.Performer,
+		Scene:                 db.Scene,
+		SceneMarker:           db.SceneMarker,
+		Studio:                db.Studio,
+		Tag:                   db.Tag,
+		SavedFilter:           db.SavedFilter,
+		AI:                    db.AI,
+		Embedding:             db.Embedding,
+		Memory:                db.Memory,
+		AISuggestion:          db.AISuggestion,
+		AIMediaQuality:        db.AIMediaQuality,
+		AISceneAudio:          db.AISceneAudio,
+		AIPerformerCareer:     db.AIPerformerCareer,
+		AIFileRename:          db.AIFileRename,
+		AIPerformerSuggestion: db.AIPerformerSuggestion,
+		AIAudit:               db.AIAudit,
+		AITranslation:         db.AITranslation,
+		AIPerformerCandidate:  db.AIPerformerCandidate,
 	}
 }

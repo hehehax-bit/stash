@@ -16,9 +16,10 @@ import (
 )
 
 const (
-	sceneMarkerTable      = "scene_markers"
-	sceneMarkersTagsTable = "scene_markers_tags"
-	sceneMarkerIDColumn   = "scene_marker_id"
+	sceneMarkerTable            = "scene_markers"
+	sceneMarkersTagsTable       = "scene_markers_tags"
+	sceneMarkersPerformersTable = "scene_markers_performers"
+	sceneMarkerIDColumn         = "scene_marker_id"
 )
 
 const countSceneMarkersForTagQuery = `
@@ -89,8 +90,9 @@ func (r *sceneMarkerRowRecord) fromPartial(o models.SceneMarkerPartial) {
 type sceneMarkerRepositoryType struct {
 	repository
 
-	scenes repository
-	tags   joinRepository
+	scenes     repository
+	tags       joinRepository
+	performers joinRepository
 }
 
 var (
@@ -109,6 +111,13 @@ var (
 				idColumn:  sceneMarkerIDColumn,
 			},
 			fkColumn: tagIDColumn,
+		},
+		performers: joinRepository{
+			repository: repository{
+				tableName: sceneMarkersPerformersTable,
+				idColumn:  sceneMarkerIDColumn,
+			},
+			fkColumn: performerIDColumn,
 		},
 	}
 )
@@ -458,6 +467,44 @@ func (qb *SceneMarkerStore) GetTagIDs(ctx context.Context, id int) ([]int, error
 func (qb *SceneMarkerStore) UpdateTags(ctx context.Context, id int, tagIDs []int) error {
 	// Delete the existing joins and then create new ones
 	return sceneMarkerRepository.tags.replace(ctx, id, tagIDs)
+}
+
+func (qb *SceneMarkerStore) GetPerformerIDs(ctx context.Context, id int) ([]int, error) {
+	return sceneMarkerRepository.performers.getIDs(ctx, id)
+}
+
+// FindByPerformerIDs returns scene markers attributed to the given performer,
+// ordered by their position in the scene.
+func (qb *SceneMarkerStore) FindByPerformerIDs(ctx context.Context, performerID, limit int) ([]*models.SceneMarker, error) {
+	rows, err := dbWrapper.Queryx(ctx, `
+		SELECT scene_markers.id FROM scene_markers
+		INNER JOIN scene_markers_performers ON scene_markers_performers.scene_marker_id = scene_markers.id
+		WHERE scene_markers_performers.performer_id = ?
+		ORDER BY scene_markers.seconds
+		LIMIT ?`, performerID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return qb.FindMany(ctx, ids)
+}
+
+func (qb *SceneMarkerStore) UpdatePerformers(ctx context.Context, id int, performerIDs []int) error {
+	// Delete the existing joins and then create new ones
+	return sceneMarkerRepository.performers.replace(ctx, id, performerIDs)
 }
 
 func (qb *SceneMarkerStore) Count(ctx context.Context) (int, error) {

@@ -1,0 +1,17 @@
+.ai-media-quality-display,
+.ai-audio-analysis-display,
+.ai-performer-career-display {
+  background-color: $card-bg;
+  color: $text-color;
+}
+
+.ai-audio-transcript {
+  background-color: $secondary;
+  border-color: $border-color;
+
+  pre {
+    background: none;
+    color: $text-color;
+    margin: 0;
+  }
+}

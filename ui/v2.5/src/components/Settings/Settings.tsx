@@ -17,6 +17,7 @@ import { SettingsServicesPanel } from "./SettingsServicesPanel";
 import { SettingsContext, useSettings } from "./context";
 import { SettingsLibraryPanel } from "./SettingsLibraryPanel";
 import { SettingsSecurityPanel } from "./SettingsSecurityPanel";
+import SettingsAIPanel from "./SettingsAIPanel";
 import Changelog from "../Changelog/Changelog";
 import { TroubleshootingModeButton } from "../TroubleshootingMode/TroubleshootingModeButton";
 import { useTroubleshootingMode } from "../TroubleshootingMode/useTroubleshootingMode";
@@ -30,6 +31,7 @@ const validTabs = [
   "services",
   "system",
   "plugins",
+  "ai",
   "logs",
   "tools",
   "changelog",
@@ -112,6 +114,13 @@ const SettingTabs: React.FC<{ tab: TabKey }> = ({ tab }) => {
               </LinkContainer>
             </Nav.Item>
             <Nav.Item>
+              <LinkContainer to="/settings?tab=ai">
+                <Nav.Link eventKey="ai">
+                  <FormattedMessage id="config.categories.ai" />
+                </Nav.Link>
+              </LinkContainer>
+            </Nav.Item>
+            <Nav.Item>
               <LinkContainer to="/settings?tab=logs">
                 <Nav.Link eventKey="logs">
                   <FormattedMessage id="config.categories.logs" />
@@ -188,6 +197,9 @@ const SettingTabs: React.FC<{ tab: TabKey }> = ({ tab }) => {
             </Tab.Pane>
             <Tab.Pane eventKey="plugins" unmountOnExit>
               <SettingsPluginsPanel />
+            </Tab.Pane>
+            <Tab.Pane eventKey="ai" unmountOnExit>
+              <SettingsAIPanel />
             </Tab.Pane>
             <Tab.Pane eventKey="logs" unmountOnExit>
               <SettingsLogsPanel />

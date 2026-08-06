@@ -149,6 +149,7 @@ func (qb *performerFilterHandler) criterionHandler() criterionHandler {
 		}),
 
 		qb.performerIsMissingCriterionHandler(filter.IsMissing),
+		hasEmbeddingCriterionHandler(filter.HasEmbedding, "performer", "performers.id"),
 		stringCriterionHandler(filter.Ethnicity, tableName+".ethnicity"),
 		stringCriterionHandler(filter.Country, tableName+".country"),
 		stringCriterionHandler(filter.EyeColor, tableName+".eye_color"),

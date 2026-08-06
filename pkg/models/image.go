@@ -35,6 +35,8 @@ type ImageFilterType struct {
 	Orientation *OrientationCriterionInput `json:"orientation"`
 	// Filter to only include images missing this property
 	IsMissing *string `json:"is_missing"`
+	// Filter to only include images which have an embedding. `true` or `false`
+	HasEmbedding *string `json:"has_embedding"`
 	// Filter to only include images with this studio
 	Studios *HierarchicalMultiCriterionInput `json:"studios"`
 	// Filter to only include images with these tags

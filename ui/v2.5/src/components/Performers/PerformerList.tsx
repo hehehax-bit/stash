@@ -55,6 +55,7 @@ import { PerformerListFilterOptions } from "src/models/list-filter/performers";
 import { Button } from "react-bootstrap";
 import cx from "classnames";
 import { FavoritePerformerCriterionOption } from "src/models/list-filter/criteria/favorite";
+import { HasEmbeddingCriterionOption } from "src/models/list-filter/criteria/has-embedding";
 import { SidebarBooleanFilter } from "../List/Filters/BooleanFilter";
 import { SidebarOptionFilter } from "../List/Filters/OptionFilter";
 import { GenderCriterionOption } from "src/models/list-filter/criteria/gender";
@@ -297,6 +298,14 @@ const SidebarContent: React.FC<{
           filter={filter}
           setFilter={setFilter}
           sectionID="favourite"
+        />
+        <SidebarBooleanFilter
+          title={<FormattedMessage id="hasEmbedding" />}
+          data-type={HasEmbeddingCriterionOption.type}
+          option={HasEmbeddingCriterionOption}
+          filter={filter}
+          setFilter={setFilter}
+          sectionID="hasEmbedding"
         />
         <SidebarOptionFilter
           title={<FormattedMessage id="gender" />}

@@ -90,6 +90,16 @@ models:
     model: github.com/stashapp/stash/internal/manager.GeneratePreviewOptionsInput
   AutoTagMetadataInput:
     model: github.com/stashapp/stash/internal/manager.AutoTagMetadataInput
+  AIImageTagInput:
+    model: github.com/stashapp/stash/internal/manager.AIImageTagInput
+  AIPerformerTagInput:
+    model: github.com/stashapp/stash/internal/manager.AIPerformerTagInput
+  AISceneTagInput:
+    model: github.com/stashapp/stash/internal/manager.AISceneTagInput
+  DetectLoopingInput:
+    model: github.com/stashapp/stash/internal/manager.DetectLoopingInput
+  AITagOrganizeInput:
+    model: github.com/stashapp/stash/internal/manager.AITagOrganizeInput
   CleanMetadataInput:
     model: github.com/stashapp/stash/internal/manager.CleanMetadataInput
   StashBoxBatchTagInput:
@@ -144,4 +154,20 @@ models:
     fields:
       career_length:
         resolver: true
+  AIConfig:
+    model: github.com/stashapp/stash/internal/manager/config.AIConfig
+  AIConfigInput:
+    model: github.com/stashapp/stash/internal/manager/config.AIConfigInput
+  AISuggestion:
+    model: github.com/stashapp/stash/internal/api.AISuggestion
+  AIMediaQuality:
+    model: github.com/stashapp/stash/internal/api.AIMediaQuality
+  AISceneAudio:
+    model: github.com/stashapp/stash/internal/api.AISceneAudio
+  AIPerformerCareer:
+    model: github.com/stashapp/stash/internal/api.AIPerformerCareer
+  AIFileRename:
+    model: github.com/stashapp/stash/internal/api.AIFileRename
+  SemanticDuplicateInput:
+    model: github.com/stashapp/stash/internal/api.SemanticDuplicateInput
   

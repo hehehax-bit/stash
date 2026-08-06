@@ -137,6 +137,7 @@ export type CriterionType =
   | "filter_favorites"
   | "favorite"
   | "has_markers"
+  | "has_embedding"
   | "is_missing"
   | "tags"
   | "scene_tags"

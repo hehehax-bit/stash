@@ -50,6 +50,10 @@ func (m *Manager) Stop() {
 
 // Add queues a job.
 func (m *Manager) Add(ctx context.Context, description string, e JobExec) int {
+	return m.AddWithType(ctx, description, "", e)
+}
+
+func (m *Manager) AddWithType(ctx context.Context, description, jobType string, e JobExec) int {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -59,6 +63,7 @@ func (m *Manager) Add(ctx context.Context, description string, e JobExec) int {
 		ID:          m.nextID(),
 		Status:      StatusReady,
 		Description: description,
+		Type:        jobType,
 		AddTime:     t,
 		exec:        e,
 		outerCtx:    ctx,

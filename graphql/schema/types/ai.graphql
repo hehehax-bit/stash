@@ -1,0 +1,492 @@
+type AIConfig {
+  enabled: Boolean!
+  base_url: String!
+  "Server API used for embedding requests: lmstudio (OpenAI-compatible) or ollama (native)."
+  endpoint: String!
+  model: String
+  embedding_model: String
+  "Model used to embed image content. Empty falls back to the text embedding model."
+  image_embedding_model: String
+  system_prompt: String!
+  automatic1111_enabled: Boolean!
+  automatic1111_base_url: String!
+  "Tag name applied to scenes/images after AI tagging. Items with this tag will be skipped."
+  tag: String!
+  "Whisper-compatible transcription endpoint (e.g. http://localhost:8000/v1). Empty to disable audio transcription."
+  transcription_base_url: String!
+  "Transcription model name, e.g. whisper-1 or local-whisper."
+  transcription_model: String!
+  "URL path for transcription requests, e.g. /audio/transcriptions (OpenAI-compatible) or /inference (whisper.cpp). Default /audio/transcriptions."
+  transcription_endpoint: String!
+  "Minimum confidence (0.0-1.0) for a face match to be applied during performer clustering. Default 0.7."
+  performer_cluster_min_confidence: Float!
+  "Maximum number of tokens allowed in an AI completion response. Default 2048."
+  max_tokens: Int!
+  "Silence detection threshold used during scene audio analysis, e.g. -35dB. Default -35dB."
+  silence_noise_threshold: String!
+  "Minimum silence duration in seconds before a silent region is treated as a scene break. Default 0.5."
+  silence_duration_min: Float!
+  "Number of frames sampled from each scene during AI analysis. 0 (default) uses automatic duration-based sampling."
+  frames_to_sample: Int!
+  "Language to translate entity text into (e.g. en, de). Empty disables AI translation."
+  translation_language: String!
+  "Scheduled AI maintenance tasks (intervals in hours, 0 disables a task)."
+  scheduled_tasks: AIScheduledTasksConfig!
+}
+
+type AIScheduledTasksConfig {
+  "Re-embed items whose metadata changed since their last embedding, every N hours. 0 disables."
+  embedding_refresh_hours: Int!
+  "Analyse audio of scenes without a transcript, every N hours. 0 disables."
+  audio_analysis_hours: Int!
+}
+
+input AIConfigInput {
+  enabled: Boolean
+  base_url: String
+  "Server API used for embedding requests: lmstudio (OpenAI-compatible) or ollama (native)."
+  endpoint: String
+  model: String
+  embedding_model: String
+  "Model used to embed image content. Empty falls back to the text embedding model."
+  image_embedding_model: String
+  system_prompt: String
+  automatic1111_enabled: Boolean
+  automatic1111_base_url: String
+  "Tag name applied to scenes/images after AI tagging. Items with this tag will be skipped."
+  tag: String
+  "Whisper-compatible transcription endpoint (e.g. http://localhost:8000/v1). Empty to disable audio transcription."
+  transcription_base_url: String
+  "Transcription model name, e.g. whisper-1 or local-whisper."
+  transcription_model: String
+  "URL path for transcription requests, e.g. /audio/transcriptions (OpenAI-compatible) or /inference (whisper.cpp). Empty for default."
+  transcription_endpoint: String
+  "Minimum confidence (0.0-1.0) for a face match to be applied during performer clustering. Default 0.7."
+  performer_cluster_min_confidence: Float
+  "Maximum number of tokens allowed in an AI completion response. Default 2048."
+  max_tokens: Int
+  "Silence detection threshold used during scene audio analysis, e.g. -35dB. Default -35dB."
+  silence_noise_threshold: String
+  "Minimum silence duration in seconds before a silent region is treated as a scene break. Default 0.5."
+  silence_duration_min: Float
+  "Number of frames sampled from each scene during AI analysis. 0 (default) uses automatic duration-based sampling."
+  frames_to_sample: Int
+  "Language to translate entity text into (e.g. en, de). Empty disables AI translation."
+  translation_language: String
+  "Scheduled AI maintenance tasks (intervals in hours, 0 disables a task)."
+  scheduled_tasks: AIScheduledTasksConfigInput
+}
+
+input AIScheduledTasksConfigInput {
+  embedding_refresh_hours: Int
+  audio_analysis_hours: Int
+}
+
+type AIEmbeddingStats {
+  "Number of scenes that have at least one embedding"
+  scenes: Int!
+  "Number of images that have at least one embedding"
+  images: Int!
+  "Number of performers that have at least one embedding"
+  performers: Int!
+  "Number of studios that have at least one embedding"
+  studios: Int!
+  "Number of tags that have at least one embedding"
+  tags: Int!
+  "Number of galleries that have at least one embedding"
+  galleries: Int!
+  "Total number of entities that have at least one embedding"
+  total: Int!
+}
+
+type AIChatMessage {
+  id: ID!
+  session_id: ID!
+  role: String!
+  content: String!
+  created_at: Time!
+}
+
+input AIChatSendInput {
+  session_id: ID
+  message: String!
+  image: String
+  "Augment the chat with scenes similar to the user's message (default true)."
+  use_library_context: Boolean
+}
+
+type AIChatSession {
+  id: ID!
+  created_at: Time!
+  updated_at: Time!
+  title: String
+}
+
+type SemanticSearchResult {
+  entity_type: String!
+  entity_id: ID!
+  score: Float!
+  scene: Scene
+  performer: Performer
+  image: Image
+  gallery: Gallery
+  studio: Studio
+  tag: Tag
+}
+
+input SemanticSearchInput {
+  "Search query text. Ignored when image is provided."
+  query: String!
+  entity_types: [String!]
+  limit: Int
+  model: String
+  "Base64-encoded image to search by (image-to-image similarity). Uses the image embedding model."
+  image: String
+  "Media type of the provided image, e.g. image/jpeg."
+  image_media_type: String
+}
+
+"Finds entities with embeddings similar to the given entity's embedding. The entity type must be one of scene, image, performer, gallery, studio, tag."
+type SimilarToEntityResult {
+  entity_type: String!
+  entity_id: ID!
+  score: Float!
+  scene: Scene
+  performer: Performer
+  image: Image
+  gallery: Gallery
+  studio: Studio
+  tag: Tag
+}
+
+type SemanticDuplicateGroup {
+  entity_type: String!
+  entities: [SemanticDuplicateEntity!]!
+}
+
+type SemanticDuplicateEntity {
+  entity_id: ID!
+  scene: Scene
+  performer: Performer
+  image: Image
+  gallery: Gallery
+  studio: Studio
+  tag: Tag
+}
+
+input SemanticDuplicateInput {
+  entity_types: [String!]
+  "Minimum cosine similarity for two entities to be considered duplicates. Default 0.9."
+  threshold: Float
+  "Minimum number of entities in a duplicate group. Default 2."
+  min_group_size: Int
+  model: String
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+}
+
+input AIPerformerClusterInput {
+  performer_ids: [Int!]
+  "Entity types to cluster: 'scene' and/or 'image'. Default both."
+  entity_types: [String!]
+  "Maximum media items scanned per performer. 0 for no limit."
+  max_media_per_performer: Int
+  "Minimum confidence (0.0-1.0) for a face match to be applied. Default 0.7."
+  min_confidence: Float
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+}
+
+input AIPerformerMergeSuggestInput {
+  "Maximum performers to compare. 0 for no limit."
+  max_performers: Int
+  "Minimum embedding similarity (0.0-1.0) for a merge suggestion. Default 0.85."
+  min_confidence: Float
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+}
+
+type AIPerformerMergeSuggestion {
+  id: ID!
+  source: Performer!
+  target: Performer!
+  confidence: Float!
+  status: String!
+  created_at: Time!
+  updated_at: Time!
+}
+
+input AISceneSegmentInput {
+  scene_ids: [Int!]
+  "Maximum scenes to process. 0 for no limit."
+  max_scenes: Int
+  "Whether to overwrite/re-process scenes already segmented. Default false."
+  overwrite: Boolean
+  "Number of frames to sample per scene. 0 (default) uses automatic duration-based sampling or the configured default."
+  frames: Int
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+}
+
+input AISuggestionInput {
+  "Entity types to suggest for: 'scene' and/or 'image'. Default both."
+  entity_types: [String!]
+  "Maximum items to analyze. 0 for no limit."
+  max_items: Int
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+}
+
+type AISuggestion {
+  id: ID!
+  entity_type: String!
+  entity_id: ID!
+  title: String!
+  details: String!
+  performers: [String!]!
+  tags: [String!]!
+  status: String!
+  created_at: Time!
+  updated_at: Time!
+  scene: Scene
+  image: Image
+}
+
+input AISuggestionApplyInput {
+  suggestion_id: ID!
+}
+
+input AIMediaQualityInput {
+  "Entity types to assess: 'scene' and/or 'image'. Default both."
+  entity_types: [String!]
+  "Maximum items to assess. 0 for no limit."
+  max_items: Int
+  "Whether to re-assess media that already has a quality score. Default false."
+  overwrite: Boolean
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+}
+
+type AIMediaQuality {
+  id: ID!
+  entity_type: String!
+  entity_id: ID!
+  quality_score: Int!
+  visual_clarity: Int!
+  lighting: Int!
+  composition: Int!
+  camera_work: Int!
+  notes: String!
+  created_at: Time!
+  updated_at: Time!
+  scene: Scene
+  image: Image
+}
+
+input AIAudioAnalyzeInput {
+  scene_ids: [Int!]
+  "Maximum scenes to process. 0 for no limit."
+  max_scenes: Int
+  "Whether to re-analyze scenes that already have audio analysis. Default false."
+  overwrite: Boolean
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+}
+
+type AITranscriptSegment {
+  "Segment start time in seconds."
+  start: Float!
+  "Segment end time in seconds."
+  end: Float!
+  text: String!
+}
+
+type AISceneAudio {
+  id: ID!
+  scene_id: ID!
+  has_audio: Boolean!
+  "Percentage of the scene that is silence (0-100)."
+  silence_ratio: Int!
+  music: Boolean!
+  speech: Boolean!
+  moans: Boolean!
+  ambient: Boolean!
+  transcript: String!
+  "Timed transcript segments, empty when the transcription server did not provide them."
+  transcript_segments: [AITranscriptSegment!]!
+  summary: String!
+  audio_codec: String!
+  created_at: Time!
+  updated_at: Time!
+  scene: Scene
+}
+
+input AIPerformerCareerInput {
+  performer_ids: [Int!]
+  "Maximum performers to process. 0 for no limit."
+  max_performers: Int
+  "Whether to re-analyze performers that already have a career profile. Default false."
+  overwrite: Boolean
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+}
+
+type AIPerformerCareer {
+  id: ID!
+  performer_id: ID!
+  career_start: Int
+  career_end: Int
+  active_years: [String!]!
+  primary_niches: [String!]!
+  notable_studios: [String!]!
+  career_highlights: String!
+  summary: String!
+  created_at: Time!
+  updated_at: Time!
+  performer: Performer
+}
+
+enum AISmartCollectionsOutputType {
+  "Create groups containing scenes"
+  GROUPS
+  "Create galleries containing images"
+  GALLERIES
+  "Create both groups and galleries"
+  GROUPS_AND_GALLERIES
+}
+
+input AISmartCollectionsInput {
+  "Maximum scenes to use when computing library statistics. 0 for no limit."
+  max_scenes: Int
+  "Maximum images to use when computing library statistics. 0 for no limit."
+  max_images: Int
+  "Maximum number of collections to create. 0 for the default (10)."
+  max_collections: Int
+  "Whether to replace existing AI-generated collections with the same name. Default false."
+  overwrite: Boolean
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+  "Type of collections to create. Default GROUPS_AND_GALLERIES."
+  output_type: AISmartCollectionsOutputType
+}
+
+input AIFileRenameInput {
+  "Specific scenes to process. If empty, all scenes are considered."
+  scene_ids: [Int!]
+  "Specific images to process. If empty, all images are considered."
+  image_ids: [Int!]
+  "Maximum total items to process. 0 for no limit."
+  max_items: Int
+  "Whether to regenerate suggestions for entities that already have a pending suggestion. Default false."
+  overwrite: Boolean
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+}
+
+type AIFileRename {
+  id: ID!
+  entity_type: String!
+  entity_id: ID!
+  "The current filename, including extension."
+  current_name: String!
+  "The suggested filename, without extension."
+  suggested_name: String!
+  "Status: pending, applied, or rejected."
+  status: String!
+  created_at: Time!
+  updated_at: Time!
+  scene: Scene
+  image: Image
+}
+
+input AIFileRenameApplyInput {
+  rename_id: ID!
+}
+
+input AIAuditInput {
+  "Entity types to audit: 'scene' and/or 'image'. Default both."
+  entity_types: [String!]
+  "Maximum items to audit. 0 for no limit."
+  max_items: Int
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+}
+
+type AIAudit {
+  id: ID!
+  entity_type: String!
+  entity_id: ID!
+  field: String!
+  current_value: String!
+  ai_value: String!
+  status: String!
+  created_at: Time!
+  updated_at: Time!
+  scene: Scene
+  image: Image
+}
+
+input AITranslateInput {
+  "Entity types to translate: 'scene', 'image' and/or 'performer'. Default all three."
+  entity_types: [String!]
+  "Maximum items to translate. 0 for no limit."
+  max_items: Int
+  "Target language (e.g. en, de). Overrides the configured translation language."
+  language: String
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+  "Re-translate entities that already have a translation for the language. Default false."
+  overwrite: Boolean
+}
+
+type AITranslation {
+  id: ID!
+  entity_type: String!
+  entity_id: ID!
+  language: String!
+  field: String!
+  translated_text: String!
+  status: String!
+  created_at: Time!
+  updated_at: Time!
+  scene: Scene
+  image: Image
+  performer: Performer
+}
+
+input AIPerformerDiscoveryInput {
+  "Maximum scenes to scan. 0 for no limit."
+  max_scenes: Int
+  "Maximum images to scan. 0 for no limit."
+  max_images: Int
+  "Minimum number of appearances for a candidate to be created. Default 3."
+  min_matches: Int
+  "Timeout in seconds for the AI request. Set to 0 (default) for the default 300s timeout."
+  timeout: Int
+}
+
+type AIPerformerCandidate {
+  id: ID!
+  name: String!
+  description: String!
+  member_count: Int!
+  entity_type: String!
+  entity_id: ID!
+  member_ids: [ID!]!
+  status: String!
+  created_at: Time!
+  updated_at: Time!
+  scene: Scene
+  image: Image
+}
+
+type AIPerformerAppearance {
+  marker_id: ID!
+  title: String!
+  "Marker start time in seconds."
+  seconds: Float!
+  "Marker end time in seconds, if set."
+  end_seconds: Float
+  screenshot: String!
+  scene: Scene!
+}

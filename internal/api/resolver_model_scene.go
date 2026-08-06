@@ -21,6 +21,18 @@ func convertVideoFile(f models.File) (*models.VideoFile, error) {
 	return vf, nil
 }
 
+func (r *sceneResolver) HasEmbedding(ctx context.Context, obj *models.Scene) (bool, error) {
+	var has bool
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		var err error
+		has, err = r.repository.Embedding.HasEmbedding(ctx, "scene", obj.ID)
+		return err
+	}); err != nil {
+		return false, err
+	}
+	return has, nil
+}
+
 func (r *sceneResolver) getPrimaryFile(ctx context.Context, obj *models.Scene) (*models.VideoFile, error) {
 	if obj.PrimaryFileID != nil {
 		f, err := loaders.From(ctx).FileByID.Load(*obj.PrimaryFileID)

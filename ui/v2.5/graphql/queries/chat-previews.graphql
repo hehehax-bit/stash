@@ -1,0 +1,73 @@
+query ScenePreview($id: ID!) {
+  findScene(id: $id) {
+    id
+    title
+    date
+    o_counter
+    details
+    paths {
+      screenshot
+      preview
+      stream
+    }
+    play_count
+    files {
+      duration
+    }
+  }
+}
+
+query PerformerPreview($id: ID!) {
+  findPerformer(id: $id) {
+    id
+    name
+    image_path
+  }
+}
+
+query ImagePreview($id: ID!) {
+  findImage(id: $id) {
+    id
+    title
+    paths {
+      thumbnail
+      image
+    }
+  }
+}
+
+query StudioPreview($id: ID!) {
+  findStudio(id: $id) {
+    id
+    name
+    image_path
+  }
+}
+
+query TagPreview($id: ID!) {
+  findTag(id: $id) {
+    id
+    name
+    image_path
+  }
+}
+
+query GalleryPreview($id: ID!) {
+  findGallery(id: $id) {
+    id
+    title
+    cover {
+      paths {
+        thumbnail
+      }
+    }
+  }
+}
+
+query GroupPreview($id: ID!) {
+  findGroup(id: $id) {
+    id
+    name
+    front_image_path
+  }
+}
